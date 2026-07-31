@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비젠티브 | VIZENTIVE - 브랜드의 상상에 시선을 더하다 - AI 캐릭터 · 광고 소재 · 카드뉴스 제작</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Gothic+A1:wght@300;400;500;700;900&family=Black+Han+Sans&family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: hsl(220, 8.75%, 92.5%);
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --primary: #0055ff;
+            --primary-rgb: 0,85,255;
+            --accent: #00d2ff;
+            --accent-grad: linear-gradient(135deg, #0055ff, #00d2ff);
+            --border-radius: 16px;
+            --font-family: 'Pretendard', sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-family); background: var(--bg-canvas); color: var(--text-main);
+            min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1140px; margin: 0 auto; padding: 0 1.75rem; }
+
+        /* Nav */
+        nav {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color); padding: 1rem 0;
+        }
+        .nav-wrap { display: flex; justify-content: space-between; align-items: center; }
+        .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.05rem; color: var(--text-main); text-decoration: none; letter-spacing: -0.5px; }
+        .nav-logo svg { display: inline-block; vertical-align: middle; }
+        .nav-links { display: flex; gap: 1.75rem; list-style: none; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color 0.25s; }
+        .nav-links a:hover { color: var(--text-main); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.65rem 1.35rem; font-size: 0.88rem; font-weight: 600; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.3s; outline: none; border: none; font-family: var(--font-family); }
+        .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 4px 15px rgba(var(--primary-rgb),0.25); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(var(--primary-rgb),0.35); }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+        .btn-outline:hover { background: rgba(var(--primary-rgb),0.06); border-color: var(--primary); }
+        .nav-cta { padding: 0.5rem 1.1rem; font-size: 0.8rem; }
+
+        /* Hero */
+        .hero { padding: 9rem 0 5rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
+        .badge { background: rgba(var(--primary-rgb),0.1); color: var(--primary); padding: 0.3rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; border: 1px solid rgba(var(--primary-rgb),0.2); margin-bottom: 1.75rem; }
+        .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.25rem; max-width: 850px; letter-spacing: -1px; }
+        .hero-desc { font-size: 1.1rem; color: var(--text-secondary); max-width: 580px; line-height: 1.65; margin-bottom: 2.25rem; }
+        .hero-actions { display: flex; gap: 0.75rem; }
+
+        /* Logo Cloud */
+        .logo-cloud { padding: 3rem 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .logo-cloud-title { text-align: center; font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 1.25rem; }
+        .logo-cloud-row { display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; }
+        .partner-logo { font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); opacity: 0.5; letter-spacing: -0.5px; }
+
+        /* Sections */
+        .section-header { text-align: center; margin-bottom: 3rem; }
+        .section-tag { color: var(--primary); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 0.5rem; display: block; }
+        .section-h2 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+
+        /* Services */
+        .services { padding: 5rem 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius);
+            padding: 2rem 1.75rem; transition: all 0.3s cubic-bezier(0.2,0.8,0.2,1);
+        }
+        .card:hover { border-color: rgba(var(--primary-rgb),0.2); transform: translateY(-2px); }
+        .card-icon { width: 44px; height: 44px; background: rgba(var(--primary-rgb),0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 1.25rem; }
+        .card-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .card-desc { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; }
+
+        /* Stats */
+        .stats-bar { padding: 4rem 0; border-top: 1px solid var(--border-color); }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center; }
+        .stat-num { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
+        .stat-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; display: block; }
+
+        /* Portfolio */
+        .portfolio { padding: 5rem 0; border-top: 1px solid var(--border-color); }
+        .portfolio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .pf-card { border-radius: var(--border-radius); overflow: hidden; border: 1px solid var(--border-color); transition: all 0.3s; background: var(--bg-card); }
+        .pf-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
+        a.pf-link { display: block; text-decoration: none; color: inherit; cursor: pointer; }
+        a.pf-link:hover { border-color: var(--primary-color); }
+        .pf-thumb { height: 180px; }
+        .pf-info { padding: 1.25rem; }
+        .pf-info h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .pf-info p { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* Testimonials */
+        .testimonials { padding: 5rem 0; border-top: 1px solid var(--border-color); }
+        .test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .test-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.75rem; }
+        .test-quote { font-size: 0.92rem; line-height: 1.6; color: var(--text-main); margin-bottom: 1.25rem; font-style: italic; }
+        .test-author { display: flex; align-items: center; gap: 0.75rem; }
+        .test-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+        .test-author strong { font-size: 0.85rem; display: block; }
+        .test-author span { font-size: 0.72rem; color: var(--text-secondary); }
+
+        /* FAQ */
+        .faq-section { padding: 5rem 0; border-top: 1px solid var(--border-color); }
+        .faq-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+        .faq-item { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden; }
+        .faq-item summary { padding: 1.15rem 1.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+        .faq-item summary::after { content: '+'; font-size: 1.2rem; color: var(--primary); font-weight: 300; transition: transform 0.3s; }
+        .faq-item[open] summary::after { transform: rotate(45deg); }
+        .faq-item p { padding: 0 1.5rem 1.15rem; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
+
+        /* Team */
+        .team-section { padding: 5rem 0; border-top: 1px solid var(--border-color); }
+        .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; text-align: center; }
+        .team-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2rem 1.25rem; }
+        .team-avatar { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1rem; }
+        .team-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .team-card p { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* Contact */
+        .contact { padding: 5rem 0 8rem; border-top: 1px solid var(--border-color); }
+        .contact-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 3.5rem; align-items: start; }
+        .contact-info h3 { font-size: 1.85rem; font-weight: 700; margin-bottom: 0.75rem; line-height: 1.3; }
+        .contact-info > p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+        .contact-widgets { display: flex; flex-direction: column; gap: 0.75rem; }
+        .widget-item { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.85rem; border-radius: var(--border-radius); }
+        .widget-circle { width: 34px; height: 34px; border-radius: 50%; background: rgba(var(--primary-rgb),0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+        .widget-item h5 { font-weight: 600; font-size: 0.85rem; }
+        .widget-item p { font-size: 0.72rem; color: var(--text-secondary); }
+        .form-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2rem; box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
+        .form-header-row { display: flex; justify-content: space-between; margin-bottom: 1.25rem; font-size: 0.78rem; color: var(--text-secondary); }
+        .form-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 1.25rem; }
+        .input-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+        .input-group label { font-size: 0.78rem; font-weight: 500; color: var(--text-secondary); }
+        .input-group input, .input-group textarea {
+            background: #f8fafc; border: 1px solid var(--border-color);
+            padding: 0.7rem 0.9rem; color: var(--text-main); border-radius: var(--border-radius); outline: none;
+            font-family: var(--font-family); font-size: 0.88rem; transition: border-color 0.25s;
+        }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--primary); }
+
+        /* Contact chips (카톡/이메일/SNS) */
+        .contact-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
+        .contact-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.25s; }
+        .contact-chip:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(var(--primary-rgb),0.15); }
+        .footer-contact { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem; margin: 0.85rem 0; }
+        .footer-biz { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; }
+
+        /* Footer */
+        footer { padding: 3rem 0; border-top: 1px solid var(--border-color); text-align: center; }
+        footer p { font-size: 0.82rem; color: var(--text-secondary); }
+        footer .footer-brand { font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.5rem; display: block; }
+
+        /* Animations */
+        
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            .nav-links { display: none; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+            .portfolio-grid, .test-grid { grid-template-columns: 1fr; }
+            .team-grid { grid-template-columns: repeat(2, 1fr); }
+            .contact-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav><div class="container nav-wrap">
+        <a href="#" class="nav-logo"><svg width="28" height="28" viewBox="0 0 100 100"><polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="#0055ff" stroke-width="6"/><circle cx="50" cy="50" r="16" fill="#0055ff"/></svg> <span>비젠티브 | VIZENTIVE</span></a>
+        <ul class="nav-links">
+            <li><a href="#services">서비스</a></li>
+            
+            
+            <li><a href="#contact">문의</a></li>
+        </ul>
+        <a href="#contact" class="btn btn-outline nav-cta">무료 상담</a>
+    </div></nav>
+
+    <div class="container hero">
+        <span class="badge">PREMIUM AGENCY</span>
+        <h1>브랜드의 상상에 시선을 더하다 - AI 캐릭터 · 광고 소재 · 카드뉴스 제작</h1>
+        <p class="hero-desc">차세대 AI 엔지니어링과 감각적인 디자인으로, 비즈니스를 압도적인 디지털 경험으로 전환합니다.</p>
+        <div class="hero-actions">
+            <a href="#contact" class="btn btn-primary">프로젝트 시작하기</a>
+            <a href="#services" class="btn btn-outline">서비스 둘러보기</a>
+        </div>
+    </div>
+
+    
+
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-header ">
+                <span class="section-tag">SERVICES</span>
+                <h2 class="section-h2">우리가 제공하는 핵심 가치</h2>
+            </div>
+            <div class="grid">
+                <div class="card ">
+                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></div>
+                    <h3 class="card-title">SNS 운영 대행</h3>
+                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
+                </div>
+                <div class="card ">
+                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+                    <h3 class="card-title">숏폼 영상 제작</h3>
+                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
+                </div>
+                <div class="card ">
+                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg></div>
+                    <h3 class="card-title">카드뉴스 콘텐츠</h3>
+                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
+                </div></div>
+        </div>
+    </section>
+
+    
+    
+    
+    
+    
+    
+
+    <footer>
+        <div class="container">
+            <span class="footer-brand"><svg width="28" height="28" viewBox="0 0 100 100"><polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="#0055ff" stroke-width="6"/><circle cx="50" cy="50" r="16" fill="#0055ff"/></svg> 비젠티브 | VIZENTIVE</span>
+            <div class="footer-contact"><a href="https://open.kakao.com/me/bruce" target="_blank" rel="noopener" class="contact-chip kakao">💬 카카오톡 상담</a><a href="mailto:gtkim1000@naver.com" class="contact-chip">✉️ gtkim1000@naver.com</a><a href="https://www.instagram.com/bodywellnote/" target="_blank" rel="noopener" class="contact-chip">📷 Instagram</a></div>
+            <p class="footer-biz">gtkim1000@naver.com</p>
+            <p>&copy; 2026 비젠티브 | VIZENTIVE. All Rights Reserved.</p>
+            <p style="margin-top:0.35rem;font-size:0.75rem;opacity:0.6;">오파독 AI 홈페이지 빌더로 제작되었습니다.</p>
+        </div>
+    </footer>
+
+    
+    
+    
+</body>
+</html>
