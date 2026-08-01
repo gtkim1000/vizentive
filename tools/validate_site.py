@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import json
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -52,6 +53,25 @@ def main() -> None:
         shutil.rmtree(DIST)
     shutil.copytree(ROOT / "public", DIST)
     shutil.copy2(HTML, DIST / "index.html")
+    server_dir = DIST / "server"
+    server_dir.mkdir(parents=True, exist_ok=True)
+    worker = (
+        f"const html = {json.dumps(source, ensure_ascii=False)};\n\n"
+        "export default {\n"
+        "  async fetch() {\n"
+        "    return new Response(html, {\n"
+        "      headers: {\n"
+        "        \"content-type\": \"text/html; charset=UTF-8\",\n"
+        "        \"cache-control\": \"no-cache\"\n"
+        "      }\n"
+        "    });\n"
+        "  }\n"
+        "};\n"
+    )
+    (server_dir / "index.js").write_text(worker, encoding="utf-8")
+    hosting_dir = DIST / ".openai"
+    hosting_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ROOT / ".openai" / "hosting.json", hosting_dir / "hosting.json")
     print(f"Validated {len(parser.links)} links, {len(parser.images)} static images, and one h1")
     print(f"Built static output at {DIST}")
 
