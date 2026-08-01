@@ -1,252 +1,130 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>비젠티브 | VIZENTIVE - 브랜드의 상상에 시선을 더하다- AI 캐릭터 · 광고 소재 · 카드뉴스 제작</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Gothic+A1:wght@300;400;500;700;900&family=Black+Han+Sans&family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-canvas: hsl(220, 8.75%, 92.5%);
-            --bg-card: #ffffff;
-            --border-color: #e2e8f0;
-            --text-main: #0f172a;
-            --text-secondary: #475569;
-            --primary: #0055ff;
-            --primary-rgb: 0,85,255;
-            --accent: #00d2ff;
-            --accent-grad: linear-gradient(135deg, #0055ff, #00d2ff);
-            --border-radius: 16px;
-            --font-family: 'Pretendard', sans-serif;
-        }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--font-family); background: var(--bg-canvas); color: var(--text-main);
-            min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased;
-        }
-        .container { max-width: 1140px; margin: 0 auto; padding: 0 1.75rem; }
-
-        /* Nav */
-        nav {
-            position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color); padding: 1rem 0;
-        }
-        .nav-wrap { display: flex; justify-content: space-between; align-items: center; }
-        .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.05rem; color: var(--text-main); text-decoration: none; letter-spacing: -0.5px; }
-        .nav-logo svg { display: inline-block; vertical-align: middle; }
-        .nav-links { display: flex; gap: 1.75rem; list-style: none; }
-        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: color 0.25s; }
-        .nav-links a:hover { color: var(--text-main); }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.65rem 1.35rem; font-size: 0.88rem; font-weight: 600; border-radius: var(--border-radius); cursor: pointer; text-decoration: none; transition: all 0.3s; outline: none; border: none; font-family: var(--font-family); }
-        .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 4px 15px rgba(var(--primary-rgb),0.25); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(var(--primary-rgb),0.35); }
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
-        .btn-outline:hover { background: rgba(var(--primary-rgb),0.06); border-color: var(--primary); }
-        .nav-cta { padding: 0.5rem 1.1rem; font-size: 0.8rem; }
-
-        /* Hero */
-        .hero { padding: 9rem 0 5rem; text-align: center; display: flex; flex-direction: column; align-items: center; }
-        .badge { background: rgba(var(--primary-rgb),0.1); color: var(--primary); padding: 0.3rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; border: 1px solid rgba(var(--primary-rgb),0.2); margin-bottom: 1.75rem; }
-        .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.25rem; max-width: 850px; letter-spacing: -1px; }
-        .hero-desc { font-size: 1.1rem; color: var(--text-secondary); max-width: 580px; line-height: 1.65; margin-bottom: 2.25rem; }
-        .hero-actions { display: flex; gap: 0.75rem; }
-
-        /* Logo Cloud */
-        .logo-cloud { padding: 3rem 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
-        .logo-cloud-title { text-align: center; font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 1.25rem; }
-        .logo-cloud-row { display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; }
-        .partner-logo { font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); opacity: 0.5; letter-spacing: -0.5px; }
-
-        /* Sections */
-        .section-header { text-align: center; margin-bottom: 3rem; }
-        .section-tag { color: var(--primary); text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 0.5rem; display: block; }
-        .section-h2 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
-
-        /* Services */
-        .services { padding: 5rem 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
-        .card {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius);
-            padding: 2rem 1.75rem; transition: all 0.3s cubic-bezier(0.2,0.8,0.2,1);
-        }
-        .card:hover { border-color: rgba(var(--primary-rgb),0.2); transform: translateY(-2px); }
-        .card-icon { width: 44px; height: 44px; background: rgba(var(--primary-rgb),0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 1.25rem; }
-        .card-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
-        .card-desc { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; }
-
-        /* Stats */
-        .stats-bar { padding: 4rem 0; border-top: 1px solid var(--border-color); }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center; }
-        .stat-num { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
-        .stat-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; display: block; }
-
-        /* Portfolio */
-        .portfolio { padding: 5rem 0; border-top: 1px solid var(--border-color); }
-        .portfolio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-        .pf-card { border-radius: var(--border-radius); overflow: hidden; border: 1px solid var(--border-color); transition: all 0.3s; background: var(--bg-card); }
-        .pf-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-        a.pf-link { display: block; text-decoration: none; color: inherit; cursor: pointer; }
-        a.pf-link:hover { border-color: var(--primary-color); }
-        .pf-thumb { height: 180px; }
-        .pf-info { padding: 1.25rem; }
-        .pf-info h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
-        .pf-info p { font-size: 0.8rem; color: var(--text-secondary); }
-
-        /* Testimonials */
-        .testimonials { padding: 5rem 0; border-top: 1px solid var(--border-color); }
-        .test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-        .test-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.75rem; }
-        .test-quote { font-size: 0.92rem; line-height: 1.6; color: var(--text-main); margin-bottom: 1.25rem; font-style: italic; }
-        .test-author { display: flex; align-items: center; gap: 0.75rem; }
-        .test-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
-        .test-author strong { font-size: 0.85rem; display: block; }
-        .test-author span { font-size: 0.72rem; color: var(--text-secondary); }
-
-        /* FAQ */
-        .faq-section { padding: 5rem 0; border-top: 1px solid var(--border-color); }
-        .faq-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
-        .faq-item { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden; }
-        .faq-item summary { padding: 1.15rem 1.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; list-style: none; display: flex; justify-content: space-between; align-items: center; }
-        .faq-item summary::after { content: '+'; font-size: 1.2rem; color: var(--primary); font-weight: 300; transition: transform 0.3s; }
-        .faq-item[open] summary::after { transform: rotate(45deg); }
-        .faq-item p { padding: 0 1.5rem 1.15rem; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
-
-        /* Team */
-        .team-section { padding: 5rem 0; border-top: 1px solid var(--border-color); }
-        .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; text-align: center; }
-        .team-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2rem 1.25rem; }
-        .team-avatar { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1rem; }
-        .team-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
-        .team-card p { font-size: 0.8rem; color: var(--text-secondary); }
-
-        /* Contact */
-        .contact { padding: 5rem 0 8rem; border-top: 1px solid var(--border-color); }
-        .contact-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 3.5rem; align-items: start; }
-        .contact-info h3 { font-size: 1.85rem; font-weight: 700; margin-bottom: 0.75rem; line-height: 1.3; }
-        .contact-info > p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
-        .contact-widgets { display: flex; flex-direction: column; gap: 0.75rem; }
-        .widget-item { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.85rem; border-radius: var(--border-radius); }
-        .widget-circle { width: 34px; height: 34px; border-radius: 50%; background: rgba(var(--primary-rgb),0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
-        .widget-item h5 { font-weight: 600; font-size: 0.85rem; }
-        .widget-item p { font-size: 0.72rem; color: var(--text-secondary); }
-        .form-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2rem; box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
-        .form-header-row { display: flex; justify-content: space-between; margin-bottom: 1.25rem; font-size: 0.78rem; color: var(--text-secondary); }
-        .form-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 1.25rem; }
-        .input-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
-        .input-group label { font-size: 0.78rem; font-weight: 500; color: var(--text-secondary); }
-        .input-group input, .input-group textarea {
-            background: #f8fafc; border: 1px solid var(--border-color);
-            padding: 0.7rem 0.9rem; color: var(--text-main); border-radius: var(--border-radius); outline: none;
-            font-family: var(--font-family); font-size: 0.88rem; transition: border-color 0.25s;
-        }
-        .input-group input:focus, .input-group textarea:focus { border-color: var(--primary); }
-
-        /* Contact chips (카톡/이메일/SNS) */
-        .contact-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
-        .contact-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.25s; }
-        .contact-chip:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(var(--primary-rgb),0.15); }
-        .footer-contact { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem; margin: 0.85rem 0; }
-        .footer-biz { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; }
-
-        /* Footer */
-        footer { padding: 3rem 0; border-top: 1px solid var(--border-color); text-align: center; }
-        footer p { font-size: 0.82rem; color: var(--text-secondary); }
-        footer .footer-brand { font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.5rem; display: block; }
-
-        /* Animations */
-        
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2.2rem; }
-            .nav-links { display: none; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
-            .portfolio-grid, .test-grid { grid-template-columns: 1fr; }
-            .team-grid { grid-template-columns: repeat(2, 1fr); }
-            .contact-layout { grid-template-columns: 1fr; }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>비젠티브 | AI 이미지·AI 영상·AI 콘텐츠 제작 스튜디오</title>
+  <meta name="description" content="AI 모델, 광고 이미지, AI 영상, 원페이지 릴스와 카드뉴스를 제작하는 비젠티브 AI Creative Studio입니다. 브랜드의 아이디어를 광고와 SNS 콘텐츠로 시각화합니다.">
+  <meta name="keywords" content="AI 이미지 제작,AI 영상 제작,AI 광고 제작,AI 모델 제작,AI 콘텐츠 제작,원페이지 릴스,카드뉴스 제작,숏폼 제작">
+  <meta property="og:title" content="비젠티브 | AI Creative Studio">
+  <meta property="og:description" content="브랜드의 상상에 시선을 더하다">
+  <meta property="og:image" content="portfolio/art/art-05.webp">
+  <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+  <style>
+    :root{--bg:#fbfaff;--surface:#fff;--text:#17151f;--muted:#65616e;--line:#e9e5ef;--primary:#7657f6;--dark:#5634d8;--pink:#d86dea;--blue:#5b8cff;--soft:#f1edff;--green:#f1faf5;--grad:linear-gradient(135deg,#7657f6,#d86dea 55%,#5b8cff);--shadow:0 24px 70px rgba(64,44,105,.13);--radius:24px;--max:1280px}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:88px;overflow-x:hidden}body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard Variable","Pretendard","Noto Sans KR",system-ui,sans-serif;line-height:1.7;word-break:keep-all;overflow-x:hidden;-webkit-font-smoothing:antialiased}p{overflow-wrap:break-word}body.lock{overflow:hidden}a{color:inherit}button,a{-webkit-tap-highlight-color:transparent}main,.footer{position:relative;z-index:1}.ai-field{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.62}.wrap{width:min(var(--max),calc(100% - 80px));margin:auto}.section{padding:140px 0}.eyebrow{display:inline-flex;gap:9px;align-items:center;color:var(--dark);font-size:.76rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.eyebrow:before{content:"";width:28px;height:2px;background:var(--grad)}h1,h2,h3,p{margin-top:0}h1{font-size:clamp(3.2rem,6vw,6.1rem);line-height:1.04;letter-spacing:-.055em;margin-bottom:30px}h2{font-size:clamp(2.3rem,4.2vw,3.65rem);line-height:1.13;letter-spacing:-.045em;margin:18px 0 24px}.gradient{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}.lead{font-size:clamp(1.04rem,1.6vw,1.2rem);color:var(--muted);max-width:660px}.btn{min-height:52px;padding:0 24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;border:1px solid transparent;font-size:.97rem;font-weight:750;cursor:pointer;transition:.25s;background:none}.btn-primary{color:#fff;background:var(--grad);box-shadow:0 12px 28px rgba(118,87,246,.28)}.btn-secondary{background:#fff;border-color:var(--line)}.btn:hover{transform:translateY(-2px)}:focus-visible{outline:3px solid rgba(91,140,255,.55);outline-offset:3px}
+    .header{position:fixed;inset:0 0 auto;z-index:80;height:78px;transition:.3s}.header.scrolled{background:rgba(251,250,255,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(233,229,239,.85)}.nav{height:100%;display:flex;align-items:center;justify-content:space-between}.brand{text-decoration:none;display:flex;flex-direction:column;line-height:1}.brand strong{font-size:1.2rem;letter-spacing:.12em}.brand small{font-size:.58rem;letter-spacing:.15em;color:var(--muted);margin-top:7px}.navlinks{display:flex;align-items:center;gap:31px}.navlinks>a:not(.btn){text-decoration:none;font-size:.9rem;font-weight:650;color:#46414f}.menu-btn{display:none;width:46px;height:46px;border:1px solid var(--line);border-radius:50%;background:#fff;font-size:1.3rem}.mobile-menu{display:none}
+    .hero{min-height:92svh;padding:130px 0 70px;display:flex;align-items:center;position:relative;overflow:hidden}.hero:before,.hero:after{content:"";position:absolute;border-radius:50%;filter:blur(12px);pointer-events:none}.hero:before{width:520px;height:520px;background:rgba(216,109,234,.11);right:-120px;top:50px}.hero:after{width:420px;height:420px;background:rgba(91,140,255,.1);left:-230px;bottom:-100px}.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:.95fr 1.05fr;gap:72px;align-items:center}.hero-copy .eyebrow{margin-bottom:25px}.hero-copy .lead{margin-bottom:32px}.actions{display:flex;gap:12px;flex-wrap:wrap}.hero-note{margin-top:34px;font-size:.72rem;font-weight:750;letter-spacing:.15em;color:#77717f}.hero-art{position:relative;height:610px;isolation:isolate}.hero-art:before{content:"";position:absolute;inset:5% 5% 2% 14%;border-radius:42% 58% 54% 46%/44% 40% 60% 56%;background:linear-gradient(145deg,#ede7ff,#ffe9f8);transform:rotate(4deg);z-index:-1}.hero-main{position:absolute;width:62%;height:88%;right:14%;top:3%;object-fit:contain;object-position:center;border-radius:190px 190px 28px 28px;filter:drop-shadow(0 24px 35px rgba(42,29,66,.16))}.float{position:absolute;width:31%;aspect-ratio:4/5;object-fit:contain;background:#fff;border-radius:18px;box-shadow:0 20px 45px rgba(39,28,66,.2);border:5px solid #fff;animation:float 6s ease-in-out infinite}.float.a{left:0;top:7%;animation-delay:-1s}.float.b{right:0;bottom:3%;animation-delay:-3s}.float.c{left:4%;bottom:4%;width:25%;animation-delay:-4.5s}@keyframes float{50%{transform:translateY(-10px)}}
+    .capability{background:#1d1925;color:#fff;padding:0;overflow:hidden}.cap-grid{min-height:84px;display:flex;align-items:center;gap:55px}.cap-grid strong{font-size:1.03rem;white-space:nowrap}.cap-list{display:flex;gap:38px;color:#dcd6e5;font-size:.82rem;white-space:nowrap;animation:marquee 22s linear infinite}.cap-list span:before{content:"✦";color:#bb9eff;margin-right:9px}@keyframes marquee{to{transform:translateX(-35%)}}
+    .campaign-stage{padding:130px 0;background:#fff;overflow:hidden}.stage-grid{display:grid;grid-template-columns:1.05fr .72fr .72fr;grid-template-rows:250px 250px;gap:18px;align-items:stretch}.stage-copy{grid-row:1/3;padding:50px 48px;background:#17151f;color:#fff;border-radius:32px 8px 8px 32px;display:flex;flex-direction:column;justify-content:space-between}.stage-copy h2{font-size:clamp(2.5rem,4.5vw,4.5rem);margin:0}.stage-copy p{color:#bdb6c6;max-width:430px}.stage-art{margin:0;position:relative;background:#f3effa;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}.stage-art img{width:100%;height:100%;object-fit:contain}.stage-art.tall{grid-row:1/3;border-radius:8px 32px 32px 8px;background:#fff0fa}.stage-art span{position:absolute;left:14px;bottom:14px;padding:7px 11px;border-radius:99px;background:rgba(255,255,255,.9);font-size:.7rem;font-weight:800;letter-spacing:.08em}.stage-art:nth-of-type(3){background:#edf5ff}
+    .section-head{display:flex;justify-content:space-between;align-items:end;gap:40px;margin-bottom:58px}.section-head .lead{margin-bottom:0}.services{background:#f8f6fc}.service-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:22px}.service{position:relative;overflow:hidden;border-radius:var(--radius);background:var(--soft);min-height:460px;padding:34px;display:flex;flex-direction:column;justify-content:flex-end}.service:nth-child(1),.service:nth-child(4){grid-column:span 7}.service:nth-child(2),.service:nth-child(3){grid-column:span 5}.service:nth-child(5){grid-column:span 12;min-height:390px}.service img{position:absolute;inset:18px 18px auto;width:calc(100% - 36px);height:58%;object-fit:contain;object-position:center;transition:.5s}.service:nth-child(1) img{width:54%;height:calc(100% - 36px);left:auto}.service:nth-child(5) img{width:48%;height:calc(100% - 36px);left:auto}.service:after{content:"";position:absolute;inset:26% 0 0;background:linear-gradient(transparent,var(--soft) 52%)}.service:nth-child(1):after,.service:nth-child(5):after{inset:0;background:linear-gradient(90deg,var(--soft) 43%,transparent 78%)}.service:hover img{transform:translateY(-4px)}.service-content{position:relative;z-index:2;max-width:560px}.service h3{font-size:1.45rem;margin-bottom:8px}.service p{color:var(--muted);margin-bottom:14px}.tags{display:flex;gap:7px;flex-wrap:wrap}.tag{padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.8);font-size:.72rem;font-weight:700;color:#5a5263}
+    .portfolio{background:#f5f2fb}.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:36px}.filter{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:99px;padding:11px 18px;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}.filter.active{background:var(--text);color:#fff;border-color:var(--text)}.portfolio-grid{columns:3;column-gap:22px}.work{display:block;width:100%;border:0;padding:0;margin:0 0 22px;background:#fff;border-radius:20px;overflow:hidden;text-align:left;cursor:pointer;break-inside:avoid;box-shadow:0 8px 30px rgba(42,29,66,.07);transition:.3s}.work:nth-child(4n+1){border-radius:90px 20px 20px 20px}.work:nth-child(5n+2){border-radius:20px 20px 90px 20px}.work[hidden]{display:none}.work img{display:block;width:100%;height:auto;transition:.45s}.work:hover img{transform:scale(1.025)}.work-info{padding:22px}.work-kicker{color:var(--dark);font-size:.72rem;font-weight:800;letter-spacing:.08em}.work h3{font-size:1.14rem;margin:6px 0}.work p{font-size:.88rem;color:var(--muted);margin:0}.portfolio-cta{text-align:center;margin-top:50px}.portfolio-cta p{font-size:1.2rem;font-weight:750}
+    .video{background:#1c1824;color:#fff;overflow:hidden}.video .eyebrow{color:#c5b5ff}.video .lead{color:#bdb5c8}.motion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#403849;border:1px solid #403849;border-radius:24px;overflow:hidden;margin-top:55px}.motion-step{background:#231e2c;padding:38px;min-height:275px}.motion-no{font-size:.75rem;color:#a28bc7;letter-spacing:.14em}.motion-step h3{font-size:1.5rem;margin:46px 0 12px}.motion-step p{color:#bdb5c8;margin:0}.motion-line{height:2px;margin-top:30px;background:linear-gradient(90deg,#7657f6,#d86dea)}
+    .deliver-grid{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:55px}.deliver{padding:28px 22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:145px;background:#fff}.deliver b{display:block;font-size:1rem;margin-top:28px}.deliver span{color:var(--primary);font-size:1.25rem}.strengths{background:linear-gradient(180deg,#fff,#f7f4ff)}.strength-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:55px}.strength{padding:35px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:75px 1fr;gap:12px}.strength:nth-child(odd){padding-right:45px}.strength:nth-child(even){padding-left:45px}.strength .num{font-size:.8rem;color:var(--primary);font-weight:800}.strength h3{font-size:1.25rem;margin-bottom:8px}.strength p{color:var(--muted);margin:0}.process-list{display:grid;grid-template-columns:repeat(5,1fr);margin-top:55px}.process-item{position:relative;padding:34px 24px 0 0;border-top:2px solid var(--line)}.process-item:before{content:"";position:absolute;top:-7px;left:0;width:12px;height:12px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 7px var(--soft)}.process-item span{font-size:.72rem;color:var(--primary);font-weight:800}.process-item h3{font-size:1.15rem;margin:14px 0 10px}.process-item p{font-size:.88rem;color:var(--muted)}
+    .audience{background:var(--green)}.checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:45px}.check{display:flex;gap:16px;padding:21px 24px;background:rgba(255,255,255,.74);border-radius:14px;font-weight:650}.check:before{content:"✓";color:#288d5f;font-weight:900}.faq-list{max-width:900px;margin:55px auto 0;border-top:1px solid var(--line)}.faq-item{border-bottom:1px solid var(--line)}.faq-q{width:100%;display:flex;justify-content:space-between;gap:20px;padding:25px 4px;border:0;background:none;text-align:left;font:inherit;font-weight:750;font-size:1.05rem;cursor:pointer}.faq-q span:last-child{color:var(--primary);font-size:1.4rem}.faq-a{display:none;padding:0 42px 25px 4px;color:var(--muted)}.faq-item.open .faq-a{display:block}.faq-item.open .faq-q span:last-child{transform:rotate(45deg)}
+    .contact{padding:120px 0;background:var(--soft)}.contact-card{background:var(--grad);color:#fff;border-radius:32px;padding:72px;display:grid;grid-template-columns:1.2fr .8fr;gap:50px;box-shadow:var(--shadow)}.contact-card .eyebrow{color:#fff}.contact-card .eyebrow:before{background:#fff}.contact-card h2{margin-bottom:20px}.contact-card p{color:rgba(255,255,255,.82)}.contact-card .btn-secondary{border:0}.contact-info{display:flex;flex-direction:column;justify-content:center;gap:10px;border-left:1px solid rgba(255,255,255,.25);padding-left:50px}.contact-info a{text-decoration:none;font-weight:700}.footer{background:#17131e;color:#fff;padding:70px 0 90px}.footer-grid{display:flex;justify-content:space-between;gap:50px}.footer p,.footer a{color:#aba4b3}.footer-links{display:flex;gap:25px;flex-wrap:wrap}.footer-bottom{border-top:1px solid #332d3b;margin-top:45px;padding-top:25px;font-size:.78rem;color:#8f8797}.mobile-bar{display:none}
+    .modal{position:fixed;inset:0;z-index:120;background:rgba(15,11,20,.86);display:none;align-items:center;justify-content:center;padding:28px}.modal.open{display:flex}.modal-card{width:min(1100px,100%);max-height:92vh;background:#fff;border-radius:24px;overflow:hidden;display:grid;grid-template-columns:1.5fr .7fr;position:relative}.modal-visual{background:#eae7ef;display:flex;align-items:center;justify-content:center;min-height:65vh}.modal-visual img{max-width:100%;max-height:86vh;object-fit:contain}.modal-copy{padding:48px 35px;display:flex;flex-direction:column;justify-content:center}.modal-copy h3{font-size:1.7rem;margin:10px 0}.modal-copy p{color:var(--muted)}.modal-close{position:absolute;right:16px;top:16px;z-index:2;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:1.3rem;cursor:pointer}.modal-nav{display:flex;gap:8px;margin-top:22px}.modal-nav button{flex:1;min-height:44px;border:1px solid var(--line);background:#fff;border-radius:99px;cursor:pointer}
+    .space-ui{position:absolute;inset:0;perspective:1100px;pointer-events:none}.space-ring{position:absolute;border:1px solid rgba(118,87,246,.25);border-radius:50%;transform-style:preserve-3d;transition:transform .4s ease}.space-ring.r1{width:78%;aspect-ratio:1;right:4%;top:1%;transform:rotateX(68deg) rotateZ(18deg)}.space-ring.r2{width:54%;aspect-ratio:1;right:16%;top:18%;border-style:dashed;transform:rotateX(62deg) rotateZ(-22deg)}.data-node{position:absolute;z-index:4;display:flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(118,87,246,.24);border-radius:8px;background:rgba(255,255,255,.72);backdrop-filter:blur(10px);font:700 .62rem/1.2 ui-monospace,monospace;letter-spacing:.08em;color:#4d3a7c;box-shadow:0 12px 25px rgba(72,46,120,.09);translate:var(--dx,0px) var(--dy,0px);transition:translate .18s ease}.data-node:before{content:"";width:7px;height:7px;border-radius:50%;background:#7657f6;box-shadow:0 0 12px #7657f6}.data-node.n1{right:2%;top:13%}.data-node.n2{left:12%;top:42%}.data-node.n3{right:1%;top:67%}.data-node.n4{left:21%;bottom:2%}.hero-art img{translate:var(--dx,0px) var(--dy,0px);transition:translate .18s ease}
+    .archive{position:relative;background:linear-gradient(180deg,#15111d,#211a2b);color:#fff;overflow:hidden}.archive:before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(118,87,246,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(118,87,246,.09) 1px,transparent 1px);background-size:64px 64px;transform:perspective(600px) rotateX(62deg) scale(1.8);transform-origin:center bottom;opacity:.45}.archive .wrap{position:relative}.archive .eyebrow{color:#cbbcff}.archive .lead{color:#bdb5c8}.archive-head{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-bottom:45px}.archive-actions{display:flex;gap:10px;flex-wrap:wrap}.archive-actions .btn-secondary{color:#17151f}.archive-wall{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;perspective:1200px}.archive-thumb{position:relative;aspect-ratio:3/4;border:1px solid rgba(255,255,255,.12);background:#2c2437;border-radius:10px;padding:0;overflow:hidden;cursor:pointer;transform-style:preserve-3d;transition:transform .25s ease,border-color .25s,box-shadow .25s}.archive-thumb:nth-child(3n){transform:translateZ(22px)}.archive-thumb:nth-child(5n){transform:translateY(14px) translateZ(-12px)}.archive-thumb:hover,.archive-thumb:focus-visible{z-index:3;transform:translateY(-8px) translateZ(55px) rotateX(2deg) rotateY(-3deg);border-color:#a58cff;box-shadow:0 25px 55px rgba(0,0,0,.35)}.archive-thumb img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}.archive-thumb span{position:absolute;left:6px;bottom:6px;padding:3px 6px;border-radius:5px;background:rgba(18,14,23,.78);color:#fff;font:600 .58rem ui-monospace,monospace}.archive-more{margin-top:38px;text-align:center;color:#a9a0b4;font-size:.82rem}
+    .reveal{opacity:0;transform:translateY(28px);transition:.75s}.reveal.in{opacity:1;transform:none}
+    @media(max-width:980px){.wrap{width:min(100% - 44px,var(--max))}.navlinks>a:not(.btn){display:none}.menu-btn{display:block}.navlinks .btn{display:none}.mobile-menu{position:fixed;inset:0;z-index:75;background:#fbfaff;padding:120px 24px 40px;flex-direction:column;gap:8px}.mobile-menu.open{display:flex}.mobile-menu a{padding:16px;text-decoration:none;font-size:1.25rem;font-weight:750;border-bottom:1px solid var(--line)}.hero-grid{grid-template-columns:1fr;gap:35px}.hero{padding-top:140px}.hero-art{height:560px}.campaign-stage{padding:100px 0}.stage-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto 330px 330px}.stage-copy{grid-column:1/3;grid-row:auto;border-radius:28px;min-height:360px}.stage-art.tall{grid-row:auto;border-radius:8px 28px 28px 8px}.section{padding:105px 0}.service:nth-child(n){grid-column:span 6}.service:nth-child(5){grid-column:span 12}.portfolio-grid{columns:2}.deliver-grid{grid-template-columns:repeat(2,1fr)}.deliver:last-child{grid-column:span 2}.process-list{grid-template-columns:1fr}.process-item{padding:20px 0 24px 35px;border-top:0;border-left:2px solid var(--line)}.process-item:before{top:25px;left:-7px}.contact-card{padding:50px;grid-template-columns:1fr}.contact-info{border-left:0;border-top:1px solid rgba(255,255,255,.25);padding:30px 0 0}.modal-card{grid-template-columns:1fr;overflow:auto}.modal-visual{min-height:45vh}.modal-copy{padding:28px}}
+    @media(max-width:640px){.wrap{width:calc(100% - 40px)}.header{height:70px}h1{font-size:clamp(2.55rem,12vw,3.75rem)}.hero{min-height:auto;padding:120px 0 80px}.hero-grid{gap:42px}.hero-copy{min-width:0}.hero-copy .lead{max-width:100%;word-break:normal}.hero-art{height:440px}.hero-main{width:76%;height:84%}.float{border-width:3px}.float.a{top:2%}.campaign-stage{padding:80px 0}.stage-grid{display:flex;flex-direction:column}.stage-copy{min-height:390px;padding:34px 28px}.stage-art{height:360px}.stage-art.tall{height:460px;border-radius:8px 8px 28px 28px}.section{padding:82px 0}.section-head{display:block;margin-bottom:36px}.cap-grid{display:block}.cap-grid strong{display:block;margin:0 0 14px;white-space:normal}.cap-list{gap:10px 17px}.service-grid{display:block}.service{min-height:450px;margin-bottom:16px;padding:25px}.service:nth-child(1) img,.service:nth-child(5) img{width:calc(100% - 36px);height:58%;left:18px}.service:nth-child(1):after,.service:nth-child(5):after{inset:26% 0 0;background:linear-gradient(transparent,var(--soft) 52%)}.portfolio-grid{columns:1}.motion-grid{grid-template-columns:1fr}.motion-step{min-height:auto}.motion-step h3{margin-top:24px}.deliver-grid{grid-template-columns:1fr}.deliver:last-child{grid-column:auto}.strength-grid,.checklist{grid-template-columns:1fr}.strength:nth-child(n){padding:28px 0}.contact{padding:80px 0}.contact-card{padding:38px 25px}.footer-grid{display:block}.footer-links{margin-top:30px}.mobile-bar{position:fixed;display:flex;z-index:70;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));gap:8px}.mobile-bar .btn{flex:1;min-height:48px;padding:0 12px}.footer{padding-bottom:150px}.modal{padding:10px}.modal-card{border-radius:17px}.modal-copy h3{font-size:1.4rem}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+    @media(max-width:980px){.archive-wall{grid-template-columns:repeat(5,1fr)}.archive-head{display:block}.archive-actions{margin-top:24px}.data-node.n2,.data-node.n4{display:none}}
+    @media(max-width:640px){.archive-wall{grid-template-columns:repeat(3,1fr);gap:7px}.archive-thumb:nth-child(n){transform:none}.space-ring{opacity:.55}.data-node{font-size:.52rem;padding:6px 8px}}
+  </style>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfessionalService","name":"비젠티브","alternateName":"VIZENTIVE","description":"AI 이미지, AI 영상, AI 광고 콘텐츠 제작 스튜디오","email":"gtkim1000@naver.com","telephone":"+82-10-8294-7823"}</script>
 </head>
 <body>
-    <nav><div class="container nav-wrap">
-        <a href="#" class="nav-logo"><svg width="28" height="28" viewBox="0 0 100 100"><polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="#0055ff" stroke-width="6"/><circle cx="50" cy="50" r="16" fill="#0055ff"/></svg> <span>비젠티브 | VIZENTIVE</span></a>
-        <ul class="nav-links">
-            <li><a href="#services">서비스</a></li>
-            
-            
-            <li><a href="#contact">문의</a></li>
-        </ul>
-        <a href="#contact" class="btn btn-outline nav-cta">무료 상담</a>
-    </div></nav>
-
-    <div class="container hero">
-        <span class="badge">PREMIUM AGENCY</span>
-        <h1>
-            <span style="display:block; font-size:1.4em; line-height:1.1; font-weight:800;">
-                브랜드의 상상에 시선을 더하다44
-            </span>
-            <span style="display:block; margin-top:12px; font-size:1.em; line-height:1.25; font-weight:700;">
-                AI 캐릭터 · 광고 소재 · 카드뉴스 제작
-            </span>
-        </h1>
-        <p class="hero-desc">차세대 AI 엔지니어링과 감각적인 디자인으로, 비즈니스를 압도적인 디지털 경험으로 전환합니다.</p>
-        <div class="hero-actions">
-            <a href="#contact" class="btn btn-primary">프로젝트 시작하기</a>
-            <a href="#services" class="btn btn-outline">서비스 둘러보기</a>
-        </div>
-    </div>
-
-    
-
-    <section class="services" id="services">
-        <div class="container">
-            <div class="section-header ">
-                <span class="section-tag">SERVICES</span>
-                <h2 class="section-h2">우리가 제공하는 핵심 가치</h2>
-            </div>
-            <div class="grid">
-                <div class="card ">
-                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></div>
-                    <h3 class="card-title">SNS 운영 대행</h3>
-                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
-                </div>
-                <div class="card ">
-                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-                    <h3 class="card-title">숏폼 영상 제작</h3>
-                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
-                </div>
-                <div class="card ">
-                    <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg></div>
-                    <h3 class="card-title">카드뉴스 콘텐츠</h3>
-                    <p class="card-desc">최고의 전문성과 최신 기술력으로 해당 영역의 비즈니스 퍼포먼스를 극대화합니다.</p>
-                </div></div>
-        </div>
-    </section>
-
-    
-    
-    
-    
-    
-    
-
-    <footer>
-        <div class="container">
-            <span class="footer-brand"><svg width="28" height="28" viewBox="0 0 100 100"><polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="#0055ff" stroke-width="6"/><circle cx="50" cy="50" r="16" fill="#0055ff"/></svg> 비젠티브 | VIZENTIVE</span>
-            <div class="footer-contact"><a href="https://open.kakao.com/me/bruce" target="_blank" rel="noopener" class="contact-chip kakao">💬 카카오톡 상담</a><a href="mailto:gtkim1000@naver.com" class="contact-chip">✉️ gtkim1000@naver.com</a><a href="https://www.instagram.com/bodywellnote/" target="_blank" rel="noopener" class="contact-chip">📷 Instagram</a></div>
-            <p class="footer-biz">gtkim1000@naver.com</p>
-            <p>&copy; 2026 비젠티브 | VIZENTIVE. All Rights Reserved.</p>
-            <p style="margin-top:0.35rem;font-size:0.75rem;opacity:0.6;">오파독 AI 홈페이지 빌더로 제작되었습니다.</p>
-        </div>
-    </footer>
-
-    
-    
-    
+  <canvas class="ai-field" id="aiField" aria-hidden="true"></canvas>
+  <header class="header" id="header"><div class="wrap nav"><a class="brand" href="#top" aria-label="비젠티브 홈"><strong>VIZENTIVE</strong><small>AI CREATIVE STUDIO</small></a><nav class="navlinks" aria-label="주요 메뉴"><a href="#services">서비스</a><a href="#portfolio">대표작</a><a href="#archive">전체 작업</a><a href="#process">제작과정</a><a href="#strengths">비젠티브</a><a href="#faq">FAQ</a><a class="btn btn-primary" href="#contact">프로젝트 문의</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></nav></div></header>
+  <nav class="mobile-menu" aria-label="모바일 메뉴"><a href="#services">서비스</a><a href="#portfolio">대표작</a><a href="#archive">전체 작업 93</a><a href="#process">제작과정</a><a href="#strengths">비젠티브</a><a href="#faq">FAQ</a><a href="#contact">프로젝트 문의</a></nav>
+  <main id="top">
+    <section class="hero"><div class="wrap hero-grid"><div class="hero-copy reveal"><span class="eyebrow">AI Creative Studio</span><h1>브랜드의 상상을<br><span class="gradient">AI 콘텐츠로</span><br>만듭니다</h1><p class="lead">AI 모델, 광고 이미지, 숏폼 영상, 원페이지 릴스와 카드뉴스까지. 비젠티브는 아이디어를 브랜드에 필요한 시각 콘텐츠로 연결합니다.</p><div class="actions"><a class="btn btn-primary" href="#portfolio">포트폴리오 보기 →</a><a class="btn btn-secondary" href="#contact">프로젝트 문의하기</a></div><p class="hero-note">AI IMAGE · AI VIDEO · AI MODEL · AI CONTENT</p></div><div class="hero-art reveal" aria-label="비젠티브 포트폴리오 미리보기"><div class="space-ui" aria-hidden="true"><i class="space-ring r1"></i><i class="space-ring r2"></i><span class="data-node n1">VISION_01</span><span class="data-node n2">MODEL.SYNTH</span><span class="data-node n3">MOTION_READY</span><span class="data-node n4">CONTENT_93</span></div><img class="hero-main" src="portfolio/art/art-05.webp" alt="연보라 스튜디오에서 브랜드를 소개하는 비젠티브 AI 모델" fetchpriority="high"><img class="float a" src="portfolio/art/art-06.webp" alt="AI 뷰티 제품 광고 콘셉트"><img class="float b" src="portfolio/art/art-46.webp" alt="AI 필라테스 광고 콘셉트"><img class="float c" src="portfolio/art/art-63.webp" alt="중년 여성 건강 정보 카드뉴스"></div></div></section>
+    <section class="capability" aria-label="핵심 제작 역량"><div class="wrap cap-grid"><strong>한 장의 제품 사진에서 캠페인 전체 비주얼까지</strong><div class="cap-list"><span>AI 모델</span><span>광고 키비주얼</span><span>AI 숏폼</span><span>원페이지 릴스</span><span>카드뉴스</span></div></div></section>
+    <section class="campaign-stage" aria-labelledby="campaign-title"><div class="wrap stage-grid"><div class="stage-copy reveal"><div><span class="eyebrow" style="color:#c5b5ff">Creative Range</span><h2 id="campaign-title">한 가지 아이디어,<br><span class="gradient">서로 다른 장면.</span></h2></div><p>제품과 타깃이 같아도 채널과 목적에 따라 표현은 달라집니다. 모델 중심의 브랜드 장면부터 제품 광고와 정보 콘텐츠까지 하나의 캠페인 언어로 연결합니다.</p></div><figure class="stage-art reveal"><img src="portfolio/art/art-29.webp" loading="lazy" alt="전체 구성이 보이는 수분 스킨케어 광고"><span>BEAUTY</span></figure><figure class="stage-art reveal"><img src="portfolio/art/art-57.webp" loading="lazy" alt="전체 구성이 보이는 여성 클라이밍 광고"><span>ACTIVE</span></figure><figure class="stage-art tall reveal"><img src="portfolio/art/art-85.webp" loading="lazy" alt="중년 여성의 몸의 신호 카드뉴스 전체 이미지"><span>INFORMATION</span></figure></div></section>
+    <section class="section services" id="services"><div class="wrap"><div class="section-head reveal"><div><span class="eyebrow">Services</span><h2>상상을 실제 콘텐츠로<br>연결합니다</h2></div><p class="lead">목적과 채널에 맞춰 이미지 한 장부터 광고 캠페인과 숏폼 시리즈까지 확장합니다.</p></div><div class="service-grid">
+      <article class="service reveal"><img src="portfolio/art/art-10.webp" loading="lazy" alt="다양한 연령과 스타일의 AI 여성 모델"><div class="service-content"><h3>AI 모델 · 브랜드 캐릭터</h3><p>연령, 헤어, 의상, 표정과 배경을 브랜드 톤에 맞게 확장합니다.</p><div class="tags"><span class="tag">브랜드 모델</span><span class="tag">연령 변형</span><span class="tag">기업 캐릭터</span></div></div></article>
+      <article class="service reveal"><img src="portfolio/art/art-29.webp" loading="lazy" alt="수분감을 표현한 AI 스킨케어 광고 이미지"><div class="service-content"><h3>AI 광고 이미지 · 키비주얼</h3><p>제품, 모델, 배경과 카피를 결합해 SNS와 상세페이지용 광고를 제작합니다.</p><div class="tags"><span class="tag">뷰티</span><span class="tag">제품 광고</span></div></div></article>
+      <article class="service reveal"><img src="portfolio/art/art-46.webp" loading="lazy" alt="여성 모델의 AI 필라테스 광고 이미지"><div class="service-content"><h3>AI 영상 · 숏폼 콘텐츠</h3><p>정적 이미지에 움직임과 카메라 연출을 더해 릴스와 쇼츠로 확장합니다.</p><div class="tags"><span class="tag">이미지 투 비디오</span><span class="tag">릴스</span></div></div></article>
+      <article class="service reveal"><img src="portfolio/art/art-63.webp" loading="lazy" alt="생활습관과 건강상식을 설명하는 원페이지 릴스"><div class="service-content"><h3>원페이지 릴스</h3><p>후킹 제목과 핵심 정보를 한 화면에 압축해 저장과 공유를 유도합니다.</p><div class="tags"><span class="tag">건강정보</span><span class="tag">인포그래픽</span></div></div></article>
+      <article class="service reveal"><img src="portfolio/art/art-85.webp" loading="lazy" alt="50대 영양제를 주제로 제작한 카드뉴스 시리즈"><div class="service-content"><h3>카드뉴스 · 시리즈 콘텐츠</h3><p>한 주제를 여러 장으로 구조화해 이해도와 체류시간을 높이는 시리즈 콘텐츠를 제작합니다.</p><div class="tags"><span class="tag">저장형 콘텐츠</span><span class="tag">시리즈</span></div></div></article>
+    </div></div></section>
+    <section class="section portfolio" id="portfolio"><div class="wrap"><div class="section-head reveal"><div><span class="eyebrow">Selected Works</span><h2>이미지에서 영상까지,<br>비젠티브가 만든 장면들</h2></div><p class="lead">문서 프레임을 벗어나 실제 제작 이미지를 캠페인 갤러리로 재구성했습니다. 작품을 눌러 디테일을 확인하세요.</p></div><div class="filters" role="group" aria-label="포트폴리오 필터"><button class="filter active" data-filter="all">전체</button><button class="filter" data-filter="model">AI 모델</button><button class="filter" data-filter="ad">광고 이미지</button><button class="filter" data-filter="reels">원페이지 릴스</button><button class="filter" data-filter="card">카드뉴스</button></div><div class="portfolio-grid" id="portfolioGrid"></div><div class="portfolio-cta"><p>더 많은 작업이 궁금하신가요?</p><div class="actions" style="justify-content:center"><a class="btn btn-primary" href="downloads/vizentive-portfolio.pdf" target="_blank" rel="noopener noreferrer">전체 포트폴리오 보기 ↗</a><a class="btn btn-secondary" href="#contact">프로젝트 문의하기</a></div></div></div></section>
+    <section class="section archive" id="archive"><div class="wrap"><div class="archive-head reveal"><div><span class="eyebrow">Visual Data Archive</span><h2>93개의 장면을<br>3차원 데이터 월에서</h2><p class="lead">PPTX에서 추출한 모든 원본급 미디어입니다. 어떤 썸네일이든 선택하면 잘림 없는 원본 이미지로 확대됩니다.</p></div><div class="archive-actions"><a class="btn btn-primary" href="downloads/vizentive-portfolio.pdf" target="_blank" rel="noopener noreferrer">원본 포트폴리오 PDF ↗</a><a class="btn btn-secondary" href="#contact">작업 문의</a></div></div><div class="archive-wall" id="archiveWall" aria-label="전체 포트폴리오 이미지 아카이브"></div><p class="archive-more">ALL SOURCE VISUALS · SELECT TO EXPLORE</p></div></section>
+    <section class="section video" id="video"><div class="wrap"><span class="eyebrow">AI Video</span><h2>한 장의 이미지가<br>움직이는 브랜드 경험으로</h2><p class="lead">실제 영상 파일은 포함되어 있지 않아 허위 데모를 노출하지 않습니다. AI로 제작한 모델과 광고 이미지를 기반으로 릴스와 쇼츠, 제품 홍보 영상으로 확장 제작합니다.</p><div class="motion-grid reveal"><article class="motion-step"><span class="motion-no">01 · IMAGE</span><h3>장면을 만듭니다</h3><p>브랜드 모델과 광고 이미지를 목적과 채널에 맞게 제작합니다.</p><div class="motion-line"></div></article><article class="motion-step"><span class="motion-no">02 · MOTION</span><h3>움직임을 설계합니다</h3><p>표정, 동작, 카메라 워크와 공간감을 더합니다.</p><div class="motion-line"></div></article><article class="motion-step"><span class="motion-no">03 · CONTENT</span><h3>콘텐츠로 완성합니다</h3><p>자막, 음악과 내레이션을 결합해 숏폼으로 편집합니다.</p><div class="motion-line"></div></article></div></div></section>
+    <section class="section" id="deliverables"><div class="wrap"><span class="eyebrow">Deliverables</span><h2>필요한 형태에 맞게<br>제작합니다</h2><div class="deliver-grid reveal" id="deliverGrid"></div></div></section>
+    <section class="section strengths" id="strengths"><div class="wrap"><span class="eyebrow">Why Vizentive</span><h2>촬영의 한계를 넘어,<br>브랜드의 가능성을 넓힙니다</h2><div class="strength-grid"><article class="strength"><span class="num">01</span><div><h3>빠른 시각화</h3><p>촬영 전에 광고 장면과 콘셉트를 확인합니다.</p></div></article><article class="strength"><span class="num">02</span><div><h3>유연한 변형</h3><p>모델, 의상, 포즈와 배경을 목적에 맞게 조정합니다.</p></div></article><article class="strength"><span class="num">03</span><div><h3>통일된 캠페인</h3><p>하나의 콘셉트를 이미지와 숏폼으로 확장합니다.</p></div></article><article class="strength"><span class="num">04</span><div><h3>정보 전달 설계</h3><p>후킹 제목, 정보 구조와 CTA까지 함께 설계합니다.</p></div></article><article class="strength"><span class="num">05</span><div><h3>중장년 타깃 이해</h3><p>건강·뷰티·웰니스 정보를 쉽게 이해하도록 표현합니다.</p></div></article></div></div></section>
+    <section class="section" id="process"><div class="wrap"><span class="eyebrow">Process</span><h2>아이디어부터<br>최종 콘텐츠까지</h2><div class="process-list"><article class="process-item"><span>STEP 01</span><h3>프로젝트 상담</h3><p>목적, 제품, 채널, 타깃과 분위기를 확인합니다.</p></article><article class="process-item"><span>STEP 02</span><h3>콘셉트 기획</h3><p>핵심 메시지와 모델, 배경, 카피 방향을 정리합니다.</p></article><article class="process-item"><span>STEP 03</span><h3>AI 시안 제작</h3><p>선정한 콘셉트를 이미지 또는 영상 시안으로 제작합니다.</p></article><article class="process-item"><span>STEP 04</span><h3>피드백 및 보정</h3><p>인물, 제품 배치, 카피와 색감을 조정합니다.</p></article><article class="process-item"><span>STEP 05</span><h3>최종 납품</h3><p>사용 채널에 맞는 크기와 파일 형식으로 제공합니다.</p></article></div></div></section>
+    <section class="section audience"><div class="wrap"><span class="eyebrow">For Your Project</span><h2>이런 프로젝트에<br>잘 맞습니다</h2><div class="checklist"><div class="check">촬영 전에 광고 콘셉트를 확인하고 싶은 브랜드</div><div class="check">전속 모델 없이 다양한 광고 이미지가 필요한 사업자</div><div class="check">제품 사진은 있지만 광고 소재가 부족한 쇼핑몰</div><div class="check">꾸준한 정보형 SNS 콘텐츠가 필요한 계정</div><div class="check">건강·뷰티·피트니스 콘텐츠가 필요한 브랜드</div><div class="check">기존 이미지를 숏폼 영상으로 확장할 기업</div><div class="check">중장년층에게 쉽게 전달할 콘텐츠가 필요한 기관</div></div></div></section>
+    <section class="section" id="faq"><div class="wrap"><div style="text-align:center"><span class="eyebrow">FAQ</span><h2>프로젝트 전에<br>자주 묻는 질문</h2></div><div class="faq-list" id="faqList"></div></div></section>
+    <section class="contact" id="contact"><div class="wrap"><div class="contact-card reveal"><div><span class="eyebrow">Start a Project</span><h2>브랜드의 다음 장면,<br>비젠티브와 시작하세요</h2><p>제품과 아이디어만 준비되어 있어도 좋습니다. 필요한 이미지와 영상, 콘텐츠 형식을 함께 설계합니다.</p><div class="actions"><a class="btn btn-secondary" href="mailto:gtkim1000@naver.com?subject=비젠티브%20프로젝트%20문의&body=안녕하세요.%20비젠티브%20프로젝트%20제작을%20문의드립니다.%0A%0A회사명:%0A담당자:%0A제작하고%20싶은%20콘텐츠:%0A사용%20채널:%0A희망%20일정:%0A참고%20사항:">프로젝트 문의하기 →</a><a class="btn" style="color:#fff;border-color:rgba(255,255,255,.45)" href="downloads/vizentive-portfolio.pdf" target="_blank" rel="noopener noreferrer">포트폴리오 PDF 보기</a></div></div><div class="contact-info"><strong>김기태</strong><a href="mailto:gtkim1000@naver.com">gtkim1000@naver.com</a><a href="tel:01082947823">010-8294-7823</a></div></div></div></section>
+  </main>
+  <footer class="footer"><div class="wrap"><div class="footer-grid"><div class="brand"><strong>VIZENTIVE</strong><small>AI CREATIVE STUDIO</small><p style="margin-top:18px">브랜드의 상상을 AI 콘텐츠로</p></div><div class="footer-links"><a href="#services">서비스</a><a href="#portfolio">포트폴리오</a><a href="mailto:gtkim1000@naver.com">이메일</a><a href="tel:01082947823">전화</a></div></div><div class="footer-bottom">© 2026 VIZENTIVE. All rights reserved.</div></div></footer>
+  <div class="mobile-bar"><a class="btn btn-secondary" href="tel:01082947823">전화 문의</a><a class="btn btn-primary" href="mailto:gtkim1000@naver.com?subject=비젠티브%20프로젝트%20문의">프로젝트 문의</a></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-card"><button class="modal-close" aria-label="포트폴리오 닫기">×</button><div class="modal-visual"><img id="modalImage" alt=""></div><div class="modal-copy"><span class="work-kicker" id="modalCategory"></span><h3 id="modalTitle"></h3><p id="modalDescription"></p><div class="tags" id="modalTags"></div><div class="modal-nav"><button id="modalPrev">← 이전</button><button id="modalNext">다음 →</button></div></div></div></div>
+  <script>
+    const works=[
+      {art:20,cat:'model',label:'AI 모델',title:'비젠티브 AI 페르소나',desc:'브랜드 톤을 인물 이미지로 구체화한 AI 모델',tags:['AI모델','브랜드비주얼']},
+      {art:10,cat:'model',label:'AI 모델',title:'오피스 브랜드 모델',desc:'신뢰감 있는 비즈니스 무드의 인물형 AI 모델',tags:['AI모델','오피스룩']},
+      {art:13,cat:'model',label:'AI 모델',title:'피트니스 페르소나',desc:'건강한 에너지와 운동 전문성을 표현한 모델',tags:['피트니스','모델변형']},
+      {art:6,cat:'ad',label:'광고 이미지',title:'골드 스킨케어 캠페인',desc:'제품과 모델을 하나의 프리미엄 장면으로 구성',tags:['뷰티','제품광고']},
+      {art:29,cat:'ad',label:'광고 이미지',title:'수분 스킨케어 캠페인',desc:'청량한 수분감과 제품 효능을 시각화한 광고',tags:['스킨케어','SNS광고']},
+      {art:36,cat:'ad',label:'광고 이미지',title:'자연주의 PDRN 캠페인',desc:'성분과 자연 이미지를 연결한 화장품 광고',tags:['자연주의','화장품']},
+      {art:42,cat:'ad',label:'광고 이미지',title:'웰니스 피트니스 캠페인',desc:'운동 장면과 메시지를 결합한 캠페인 비주얼',tags:['피트니스','AI모델']},
+      {art:46,cat:'ad',label:'광고 이미지',title:'필라테스 캠페인',desc:'자세와 공간감을 강조한 여성 운동 광고',tags:['필라테스','라이프스타일']},
+      {art:57,cat:'ad',label:'광고 이미지',title:'클라이밍 캠페인',desc:'도전과 에너지를 담은 아웃도어 광고 비주얼',tags:['아웃도어','캠페인']},
+      {art:63,cat:'reels',label:'원페이지 릴스',title:'몸이 보내는 신호',desc:'핵심 정보를 한 화면에 압축한 저장형 콘텐츠',tags:['건강정보','원페이지릴스']},
+      {art:76,cat:'reels',label:'원페이지 릴스',title:'당뇨 위험 신호',desc:'후킹 제목과 정보 구조를 결합한 건강 콘텐츠',tags:['인포그래픽','SNS콘텐츠']},
+      {art:85,cat:'card',label:'카드뉴스',title:'중년 여성 몸의 신호',desc:'중장년 여성 건강 정보를 구조화한 카드뉴스',tags:['중년여성','건강정보']},
+      {art:93,cat:'card',label:'카드뉴스',title:'50대 영양 정보',desc:'영양소 정보를 쉽게 정리한 저장형 카드뉴스',tags:['50대','영양정보']}
+    ];
+    const artNumbers=[1,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97];
+    const archiveItems=artNumbers.map((art,index)=>{const group=art<=22||art===97?'AI MODEL':art<=62?'AI AD CREATIVE':art<=81?'ONE-PAGE REELS':'CARD NEWS';return{art,label:group,title:`Visual Archive ${String(index+1).padStart(2,'0')}`,desc:'비젠티브 포트폴리오 원본 미디어를 전체 비율로 확인합니다.',tags:['VIZENTIVE',group.replaceAll(' ','')]}});
+    const deliverables=['SNS 광고 이미지','제품 상세페이지 비주얼','AI 브랜드 모델','회사 및 서비스 캐릭터','Instagram Reels','YouTube Shorts','건강·뷰티 원페이지 릴스','카드뉴스 시리즈','배너 및 프로모션 이미지','프레젠테이션 키비주얼'];
+    const faqs=[
+      ['제품 사진만 있어도 광고 이미지를 만들 수 있나요?','가능합니다. 제품 사진과 원하는 분위기, 타깃 정보를 바탕으로 AI 모델, 배경과 광고 콘셉트를 결합할 수 있습니다. 다만 원본 사진의 해상도와 촬영 상태에 따라 표현 범위가 달라질 수 있습니다.'],
+      ['동일한 AI 모델로 여러 콘텐츠를 만들 수 있나요?','동일한 모델 콘셉트를 기준으로 의상, 포즈, 표정과 배경을 바꿔 여러 광고 소재로 확장할 수 있습니다. 생성형 AI의 특성상 완전히 동일한 결과보다 일관성이 유지되도록 보정합니다.'],
+      ['AI 이미지뿐 아니라 영상도 제작하나요?','AI 이미지에 움직임과 카메라 연출을 더해 릴스, 쇼츠와 제품 홍보 영상으로 확장할 수 있습니다. 영상 길이와 난이도에 따라 범위가 달라집니다.'],
+      ['원하는 이미지 크기로 받을 수 있나요?','Instagram, YouTube, 블로그, 상세페이지와 광고 배너 등 사용 채널에 맞춰 비율과 해상도를 협의할 수 있습니다.'],
+      ['수정은 가능한가요?','모델의 표정, 헤어스타일, 의상, 포즈, 배경, 제품 배치와 텍스트 구성을 협의 범위 안에서 수정할 수 있습니다.'],
+      ['작업 기간과 비용은 어떻게 결정되나요?','콘텐츠 종류, 제작 수량, 영상 길이, 수정 범위와 난이도를 확인한 뒤 프로젝트별 일정과 견적을 안내합니다.'],
+      ['AI 제작물의 사용 범위는 어떻게 되나요?','상업적 사용 여부와 납품 범위는 시작 전에 협의합니다. 외부 소스와 플랫폼 정책에 따라 제한이 생길 수 있으므로 최종 계약 조건을 기준으로 안내합니다.']
+    ];
+    const grid=document.querySelector('#portfolioGrid');
+    works.forEach((w,i)=>{const b=document.createElement('button');b.className='work reveal';b.dataset.cat=w.cat;b.dataset.index=i;b.innerHTML=`<img src="portfolio/art/art-${String(w.art).padStart(2,'0')}.webp" loading="lazy" alt="${w.title}"><span class="work-info"><span class="work-kicker">${w.label}</span><h3>${w.title}</h3><p>${w.desc}</p></span>`;grid.append(b)});
+    const archiveWall=document.querySelector('#archiveWall');
+    archiveItems.forEach((item,index)=>{const b=document.createElement('button');b.className='archive-thumb';b.dataset.index=index;b.setAttribute('aria-label',`${item.title} 원본 보기`);b.innerHTML=`<img src="portfolio/art/art-${String(item.art).padStart(2,'0')}.webp" loading="lazy" alt="${item.title}"><span>DATA_${String(index+1).padStart(2,'0')}</span>`;archiveWall.append(b)});
+    document.querySelector('#deliverGrid').innerHTML=deliverables.map((x,i)=>`<div class="deliver"><span>${String(i+1).padStart(2,'0')}</span><b>${x}</b></div>`).join('');
+    document.querySelector('#faqList').innerHTML=faqs.map((x,i)=>`<div class="faq-item"><button class="faq-q" aria-expanded="false" aria-controls="faq-${i}"><span>${x[0]}</span><span>+</span></button><div class="faq-a" id="faq-${i}">${x[1]}</div></div>`).join('');
+    const header=document.querySelector('.header'),menuBtn=document.querySelector('.menu-btn'),mobileMenu=document.querySelector('.mobile-menu');
+    addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>20),{passive:true});
+    function toggleMenu(open){mobileMenu.classList.toggle('open',open);menuBtn.setAttribute('aria-expanded',String(open));menuBtn.setAttribute('aria-label',open?'메뉴 닫기':'메뉴 열기');menuBtn.textContent=open?'×':'☰';document.body.classList.toggle('lock',open)}
+    menuBtn.addEventListener('click',()=>toggleMenu(!mobileMenu.classList.contains('open')));mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>toggleMenu(false)));
+    document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelector('.filter.active').classList.remove('active');f.classList.add('active');document.querySelectorAll('.work').forEach(w=>w.hidden=f.dataset.filter!=='all'&&w.dataset.cat!==f.dataset.filter)}));
+    document.querySelectorAll('.faq-q').forEach(q=>q.addEventListener('click',()=>{const item=q.parentElement,open=item.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(x=>{x.classList.remove('open');x.querySelector('button').setAttribute('aria-expanded','false')});if(!open){item.classList.add('open');q.setAttribute('aria-expanded','true')}}));
+    const modal=document.querySelector('.modal'),closeBtn=document.querySelector('.modal-close');let active=0,lastFocus,activeCollection=works;
+    function showWork(i){active=(i+activeCollection.length)%activeCollection.length;const w=activeCollection[active];document.querySelector('#modalImage').src=`portfolio/originals/original-${String(w.art).padStart(2,'0')}.webp`;document.querySelector('#modalImage').alt=w.title;document.querySelector('#modalCategory').textContent=w.label;document.querySelector('#modalTitle').textContent=w.title;document.querySelector('#modalDescription').textContent=w.desc;document.querySelector('#modalTags').innerHTML=w.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}
+    function openModal(i,collection=works){lastFocus=document.activeElement;activeCollection=collection;showWork(i);modal.classList.add('open');document.body.classList.add('lock');closeBtn.focus()}
+    function closeModal(){modal.classList.remove('open');document.body.classList.remove('lock');if(lastFocus)lastFocus.focus()}
+    grid.addEventListener('click',e=>{const card=e.target.closest('.work');if(card)openModal(+card.dataset.index)});closeBtn.addEventListener('click',closeModal);document.querySelector('#modalPrev').addEventListener('click',()=>showWork(active-1));document.querySelector('#modalNext').addEventListener('click',()=>showWork(active+1));modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+    archiveWall.addEventListener('click',e=>{const card=e.target.closest('.archive-thumb');if(card)openModal(+card.dataset.index,archiveItems)});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(modal.classList.contains('open'))closeModal();else toggleMenu(false)}if(e.key==='Tab'&&modal.classList.contains('open')){const f=[...modal.querySelectorAll('button')];const first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const heroArt=document.querySelector('.hero-art');
+    const spatialLayers=[[heroArt.querySelector('.hero-main'),5],[heroArt.querySelector('.float.a'),-12],[heroArt.querySelector('.float.b'),16],[heroArt.querySelector('.float.c'),-18],[heroArt.querySelector('.n1'),12],[heroArt.querySelector('.n2'),-8],[heroArt.querySelector('.n3'),18],[heroArt.querySelector('.n4'),-14]];
+    function moveSpace(mx,my){spatialLayers.forEach(([el,depth])=>{el.style.setProperty('--dx',`${mx*depth}px`);el.style.setProperty('--dy',`${my*depth}px`)})}
+    if(!reduced){heroArt.addEventListener('pointermove',e=>{const r=heroArt.getBoundingClientRect();moveSpace((e.clientX-r.left)/r.width-.5,(e.clientY-r.top)/r.height-.5)});heroArt.addEventListener('pointerleave',()=>moveSpace(0,0))}
+    const canvas=document.querySelector('#aiField'),ctx=canvas.getContext('2d');let nodes=[],fieldHue=258,raf;
+    function sizeField(){const d=Math.min(devicePixelRatio,1.5);canvas.width=innerWidth*d;canvas.height=innerHeight*d;canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';ctx.setTransform(d,0,0,d,0,0);nodes=Array.from({length:Math.min(58,Math.max(28,Math.floor(innerWidth/25)))},(_,i)=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,r:i%9===0?2.4:1.2}))}
+    function drawField(){ctx.clearRect(0,0,innerWidth,innerHeight);for(const n of nodes){n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>innerWidth)n.vx*=-1;if(n.y<0||n.y>innerHeight)n.vy*=-1;ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle=`hsla(${fieldHue},78%,62%,.42)`;ctx.fill()}for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy);if(d<125){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`hsla(${fieldHue},72%,60%,${(1-d/125)*.12})`;ctx.stroke()}}raf=requestAnimationFrame(drawField)}
+    sizeField();addEventListener('resize',sizeField,{passive:true});if(!reduced)drawField();else drawField(),cancelAnimationFrame(raf);
+    const hueMap={services:280,portfolio:245,archive:315,video:220,strengths:155,contact:275};
+    const themeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting&&hueMap[entry.target.id])fieldHue=hueMap[entry.target.id]}),{threshold:.35});Object.keys(hueMap).forEach(id=>{const el=document.getElementById(id);if(el)themeObserver.observe(el)});
+    const observer=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');observer.unobserve(e.target)}}),{threshold:.08});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));
+  </script>
 </body>
 </html>

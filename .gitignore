@@ -1,3 +1,7 @@
 node_modules/
 .next/
 .open-next/
+dist/
+backups/
+source_assets/
+tmp-*/
