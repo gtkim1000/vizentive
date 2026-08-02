@@ -36,6 +36,10 @@ def main() -> None:
     for directory in (SLIDES, THUMBS, DOWNLOADS, TEXT_OUTPUT.parent):
         directory.mkdir(parents=True, exist_ok=True)
 
+    for directory in (SLIDES, THUMBS):
+        for stale_file in directory.glob("slide-*.webp"):
+            stale_file.unlink()
+
     document = fitz.open(PDF)
     extracted: list[str] = []
     for index, page in enumerate(document, start=1):

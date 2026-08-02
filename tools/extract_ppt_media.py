@@ -17,6 +17,9 @@ SHEET = ROOT / "docs" / "ppt-media-contact-sheet.jpg"
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     ORIGINALS.mkdir(parents=True, exist_ok=True)
+    for pattern, directory in (("art-*.webp", OUTPUT), ("original-*.webp", ORIGINALS)):
+        for stale_file in directory.glob(pattern):
+            stale_file.unlink()
     entries: list[tuple[int, str, Image.Image]] = []
     with ZipFile(PPTX) as archive:
         media = sorted(
