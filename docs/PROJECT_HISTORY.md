@@ -101,6 +101,7 @@ python tools/validate_site.py
 - 비젠티브 버전 5 백업: `backups/vizentive-version5.zip`
 - 비젠티브 버전 5 커밋: `eead95c`
 - 비젠티브 버전 6 백업: `backups/vizentive-version6.zip`
+- 비젠티브 버전 7 도넛 브라우저 안정화 백업: `backups/vizentive-version7-donut-stabilization.zip`
 - 모바일 슬로건 및 브라우징 위치 조정: `a464c41`
 - 모바일 브라우징 위치 미세 조정: `65efff2`
 - 버튼 기준 모바일 브라우징 간격 조정: `ce1928b`
