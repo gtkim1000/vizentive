@@ -29,7 +29,7 @@ def render_page(page: fitz.Page, page_number: int) -> str:
     thumbnail.thumbnail((600, 600), Image.Resampling.LANCZOS)
     thumb_path = THUMBS / f"slide-{page_number:02d}.webp"
     thumbnail.save(thumb_path, "WEBP", quality=82, method=6)
-    return page.get_text("text").strip()
+    return "\n".join(line.rstrip() for line in page.get_text("text").splitlines()).strip()
 
 
 def main() -> None:

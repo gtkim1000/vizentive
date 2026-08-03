@@ -1,0 +1,1 @@
+window.VIZENTIVE_PPT={"representatives":{"mascot":5,"aiModel":15,"aiAd":6,"beauty":6,"health":42,"fitness":50,"softLook":52,"outdoor":56,"reels":63,"cardNews":87},"sequences":{"cardBody1":[87,86,85,88],"cardBody2":[89,90,91,92],"cardNutrition1":[84,83,82],"cardNutrition2":[93,94,95,96]}};
