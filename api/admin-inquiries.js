@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: 'Method not allowed' });
   }
 
-  const password = process.env.ADMIN_DASHBOARD_PASSWORD;
+  const password = process.env.ADMIN_PWD;
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   if (!password || !supabaseUrl || !secretKey) return send(res, 503, { error: '관리자 조회 기능이 설정되지 않았습니다.' });
