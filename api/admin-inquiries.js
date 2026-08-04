@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
   if (!password || !supabaseUrl || !secretKey) return send(res, 503, { error: '관리자 조회 기능이 설정되지 않았습니다.' });
   if (!sameSecret(req.headers['x-admin-password'], password)) return send(res, 401, { error: '관리자 비밀번호가 올바르지 않습니다.' });
 
-  const fields = 'receipt_id,brand,contact_name,phone,industry,email,services,quantity,desired_date,message,channel,status,created_at';
+  const fields = 'id,receipt_id,brand,contact_name,phone,industry,email,services,quantity,desired_date,message,channel,consent,status,user_agent,created_at,updated_at';
   try {
     const db = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/consultation_inquiries?select=${fields}&order=created_at.desc&limit=500`, {
       headers: { apikey: secretKey },
