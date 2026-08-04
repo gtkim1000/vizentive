@@ -5,3 +5,6 @@ dist/
 backups/
 source_assets/
 tmp-*/
+.env
+.env.*
+!.env.example
