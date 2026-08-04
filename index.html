@@ -155,7 +155,16 @@
     addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>20),{passive:true});
     function toggleMenu(open){mobileMenu.classList.toggle('open',open);menuBtn.setAttribute('aria-expanded',String(open));menuBtn.setAttribute('aria-label',open?'메뉴 닫기':'메뉴 열기');menuBtn.textContent=open?'×':'☰';document.body.classList.toggle('lock',open)}
     menuBtn.addEventListener('click',()=>toggleMenu(!mobileMenu.classList.contains('open')));mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>toggleMenu(false)));
-    document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();toggleMenu(false);const target=document.querySelector('#contact');requestAnimationFrame(()=>requestAnimationFrame(()=>{target.scrollIntoView({behavior:innerWidth<=640||matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});history.replaceState(null,'','#contact')}))}));
+    let contactScrollRun=0;
+    addEventListener('touchstart',()=>contactScrollRun++,{passive:true});
+    addEventListener('wheel',()=>contactScrollRun++,{passive:true});
+    document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',event=>{
+      event.preventDefault();toggleMenu(false);const target=document.querySelector('#contact'),run=++contactScrollRun;
+      history.replaceState(null,'','#contact');
+      if(innerWidth>640&&!matchMedia('(prefers-reduced-motion: reduce)').matches){target.scrollIntoView({behavior:'smooth',block:'start'});return}
+      const align=()=>{if(run!==contactScrollRun)return;const offset=header.getBoundingClientRect().height,delta=target.getBoundingClientRect().top-offset;if(Math.abs(delta)>1)scrollBy({top:delta,behavior:'auto'})};
+      requestAnimationFrame(()=>requestAnimationFrame(align));[120,350,800].forEach(delay=>setTimeout(align,delay));
+    }));
     document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelector('.filter.active').classList.remove('active');f.classList.add('active');document.querySelectorAll('.work').forEach(w=>w.hidden=f.dataset.filter!=='all'&&w.dataset.cat!==f.dataset.filter)}));
     document.querySelectorAll('.faq-q').forEach(q=>q.addEventListener('click',()=>{const item=q.parentElement,open=item.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(x=>{x.classList.remove('open');x.querySelector('button').setAttribute('aria-expanded','false')});if(!open){item.classList.add('open');q.setAttribute('aria-expanded','true')}}));
     const modal=document.querySelector('.modal'),closeBtn=document.querySelector('.modal-close');let active=0,lastFocus,activeCollection=viewerGroups[0].items,viewerGroupIndex=0;const viewerGroupPositions=new Map();
