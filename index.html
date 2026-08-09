@@ -259,7 +259,7 @@
     function selectTorus(index){torusVelocity=0;if(index!==torusFront){torusRotation+=nearestTurn(index,torusItems.length,torusRotation);torusShell.classList.add('snapping');layoutTorus();setTimeout(()=>torusShell.classList.remove('snapping'),500);return}if(torusMode==='groups')enterGroup(index);else if(torusMode==='subgroups')enterSubgroup(index);else openModal(index,torusItems)}
     function noteTorusInput(){torusLastInput=performance.now()}
     let torusDragFrame=0,torusDragDelta=0;
-    function renderTorusDrag(){torusDragFrame=0;if(!torusDragDelta)return;const maxDelta=48,dx=Math.max(-maxDelta,Math.min(maxDelta,torusDragDelta));torusDragDelta=0;torusRotation+=dx*.006;torusVelocity=dx*.0008;layoutTorus()}
+    function renderTorusDrag(){torusDragFrame=0;if(!torusDragDelta)return;const dx=torusDragDelta;torusDragDelta=0;torusRotation+=dx*.006;torusVelocity=dx*.0008;layoutTorus()}
     function startDrag(e){noteTorusInput();torusDragging=true;torusMoved=false;torusDragDelta=0;torusLastX=torusStartX=e.clientX;torusVelocity=0;torusDownIndex=e.target.closest('.torus-card')?.dataset.index??null;torusShell.classList.remove('snapping','auto-rotating');torusShell.classList.add('dragging');torusShell.setPointerCapture(e.pointerId)}
     function dragTorus(e){if(!torusDragging)return;const dx=e.clientX-torusLastX;torusLastX=e.clientX;if(Math.abs(e.clientX-torusStartX)>18)torusMoved=true;torusDragDelta+=dx;if(!torusDragFrame)torusDragFrame=requestAnimationFrame(renderTorusDrag)}
     function endDrag(){noteTorusInput();if(torusDragFrame){cancelAnimationFrame(torusDragFrame);renderTorusDrag()}const selected=torusDownIndex;torusDragging=false;torusDownIndex=null;torusShell.classList.remove('dragging');if(!torusMoved&&selected!==null)selectTorus(+selected)}
