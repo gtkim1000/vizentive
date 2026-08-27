@@ -360,7 +360,7 @@
     addEventListener('resize',()=>{if(!networkNodes.length)return;networkMetrics=null;advanceNetworkOrbits(0);applyNetworkBillboard()},{passive:true});
     function applySpatialMode(){const mode=spatialModes[spatialModeIndex];spatialIntro.dataset.spatialMode=mode;torusModeToggle.setAttribute('aria-label',mode==='torus'?'다른 가상 공간 모드로 전환':'도넛 브라우저 모드로 전환');if(mode==='network'){ensureNetworkBuilt();noteNetworkInput();startNetworkFrame()}else if(torusScene.children.length){torusMetrics=null;layoutTorus();noteTorusInput()}}
     let spatialTransitionActive=false;
-    const SPATIAL_SCATTER_OUT_MS=1120,SPATIAL_SCATTER_IN_MS=1226,SPATIAL_SCATTER_DIST=1700,SPATIAL_BOUNCE_MS=2600,SPATIAL_AUTO_EXPLODE_TORUS_VELOCITY=.12,SPATIAL_AUTO_EXPLODE_NETWORK_VELOCITY=16;
+    const SPATIAL_SCATTER_OUT_MS=1120,SPATIAL_SCATTER_IN_MS=1226,SPATIAL_SCATTER_DIST=1700,SPATIAL_BOUNCE_MS=1300,SPATIAL_AUTO_EXPLODE_TORUS_VELOCITY=.12,SPATIAL_AUTO_EXPLODE_NETWORK_VELOCITY=16;
     function settleTracker(total){let resolveHalf,resolveAll;const half=new Promise(r=>resolveHalf=r),all=new Promise(r=>resolveAll=r),threshold=Math.max(1,Math.ceil(total/2));let done=0;function mark(){done++;if(done>=threshold)resolveHalf();if(done>=total)resolveAll()}if(total===0){resolveHalf();resolveAll()}return{mark,half,all}}
     function parseCardTransform(t){const tr=/translate3d\(([-\d.]+)px,?\s*([-\d.]+)px,?\s*([-\d.]+)px\)/.exec(t||''),sc=/scale\(([-\d.]+)\)/.exec(t||'');return{x:tr?+tr[1]:0,y:tr?+tr[2]:0,z:tr?+tr[3]:0,scale:sc?+sc[1]:1}}
     const SPATIAL_SCATTER_KINDS=['up','down','left','right','radial','toward','away'];
