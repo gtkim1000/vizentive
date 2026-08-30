@@ -527,6 +527,59 @@ Playwright로 독립적인 캡처-단계 `transitionend` 리스너를 별도로 
 
 "가상공간 전환시 일부러 엄청 느리게 합류하는 카드의 속도를 2배 빠르게 해달라" — bounce/orbit/wave/loop 네 경로 스타일이 공유하는 지속시간 상수 `SPATIAL_BOUNCE_MS`를 2600ms→1300ms로 정확히 2배(직전 값 기준, 최초값 기준 아님) 단축. 기본(`plain`) 카드의 `SPATIAL_SCATTER_OUT_MS`/`IN_MS`는 그대로 유지. Playwright로 상수 값과 실제 전환 완료(`spatial-overlap` 해제) 소요 시간을 실측해 반영을 확인.
 
+## 가상공간 서버 캡슐화(Spatial Bootstrap API) — 2026-08-30
+
+"프런트 소스만 복사해서는 가상공간을 정상 실행할 수 없게 하되, 서버 응답 대기 때문에 렌더링이 멈추거나 지연되면 안 된다"는 요청으로, 가상공간(도넛/네트워크)의 **랜덤 생성 로직**(전환 스타일 선택, 흩어짐 파라미터, 네트워크 궤도 초기값, 초기 모드/전면 그룹 선택)을 서버(`api/spatial/bootstrap.js`, `api/spatial/next.js`, 공유 헬퍼 `api/spatial/_lib.js`)로 옮기고, 클라이언트는 그 결과를 소비만 하는 얇은 실행기로 재구성했다.
+
+- **의도적으로 옮기지 않은 것**: `torusGroups` 원본(계층·라벨·설명·art 번호)과 `childTorusItems`/`makeSubItems` 계열 함수는 그대로 클라이언트에 남겼다 — 이 데이터가 데이터 월(`archiveItems`)·포트폴리오 분류색·원본보기 모달(`viewerGroups`)에서도 동시에 쓰이는 공유 데이터라서, 서버로 옮기면 저 기능들도 부트스트랩 성공에 종속되거나(요구사항 위반: "가상공간만 대기, 나머지 콘텐츠는 즉시 표시") 관련 없는 기능까지 고쳐야 했다. 대신 **콘텐츠와 무관한 "생성 규칙"**(전환 종류·경로 스타일·파라미터 랜덤 선택 공식, 궤도 반지름/각도/속도/기울기 jitter 공식, 초기 모드·전면 그룹의 무작위 선택)만 서버로 옮겼다 — 서버는 카운트/포지션/enum만 다루고 실제 작품 라벨·설명은 전혀 모른다.
+- **타이밍 함정(설계 단계에서 못 잡고 구현 중 발견)**: `spatialModeIndex`/`torusPick`처럼 페이지 로드 시 딱 한 번 읽히는 값은, 그 읽는 지점이 스크립트 최상단에서 **동기적으로** 실행되기 때문에 `fetch()` 결과가 도착하기 한참 전에 이미 끝나 있다 — bootstrap 응답을 아무리 빨리 반영해도 절대 제때 반영될 수 없는 구조. 해결: `applySpatialMode()`/`renderTorus()`(실제로 화면에 그리는 두 호출)만 `spatialBootstrapReady`(부트스트랩 성공 또는 3초 타임아웃 폴백 중 먼저 오는 쪽에 resolve)가 끝난 뒤로 미루는 `spatialStartRender()`를 새로 만들고, 그 안에서 `spatialConfig.torusPick`/`.mode`를 다시 읽어 `currentTorusGroup`/`torusRotation`/`defaultTorusRotation`(이 셋을 위해 `defaultTorusRotation` 선언을 `const`에서 `let`으로 분리)에 반영한다. 반면 `buildNetworkData`의 궤도 jitter나 전환 레시피는 애초에 **호출 시점**(사용자 상호작용 이후)에 값을 읽으므로 이 문제가 없다 — 값을 "언제 읽는지"가 동기 초기화 코드와 함수 본문 내부 참조 사이에서 근본적으로 다르다는 걸 놓치기 쉽다.
+- **링 감쇠 상수는 손대지 않음**: `NETWORK_RING_SCALE_FALL`/`OPACITY_FALL`과 `.42`/`.28` 스케일·투명도 하한은 `buildNetworkData` 말고도 `predictRingRestState()`(허브 리트릿 목표 예측 — [[torus-network-scatter-variety]] 메모에 정리된, 여러 차례에 걸쳐 힘들게 고친 예측 시스템)에서도 같은 상수를 참조한다. 이 값을 서버 파라미터로 바꿔서 얻는 이득(숫자 몇 개)보다 그 예측 시스템을 건드릴 회귀 위험이 훨씬 커서, 이 두 상수만은 원래 하드코딩된 리터럴로 그대로 남겼다 — 대신 궤도 반지름/각도/속도/기울기 jitter 범위(콘텐츠·다른 기능과 무관, `buildNetworkData` 안에서만 쓰임)만 `spatialConfig`로 이전했다.
+- **레시피 버퍼**: 카드 1장당 레시피 1개(`[k,p,s1..s5]` 고정 길이 숫자 배열), `takeRecipe()`/`nextNetSlot()`은 항상 동기 반환(버퍼 없으면 고정 폴백 1개), 갱신은 `spatialRefillInFlight` 플래그로 중복 방지·항상 fire-and-forget. `Cache-Control:no-store,private`, HMAC-SHA256 서명 토큰(`api/admin-inquiries.js`의 `timingSafeEqual` 패턴 재사용)으로 `/api/spatial/next`를 서버측에서 실제로 검증.
+- **드래그 안내 라벨 정리**: `.scene-counter`("TORUS VISUAL SPACE · DRAG TO ROTATE", 원래부터 있던 정적 문구, JS가 전혀 건드리지 않음)가 카드가 하나도 없는 상태에서도 계속 떠 있던 것을 발견 — `spatialStartRender()`가 실제로 렌더링에 성공했을 때만 `#spatialIntro`에 `.spatial-ready` 클래스를 추가하고, `.spatial-hero:not(.spatial-ready) .scene-counter{display:none}`로 카드 없는 상태에서는 숨김.
+- **실측(2026-08-30, 로컬 8010번 포트, Playwright)**: `index.html` 순변화 **+4,489B**(256,183→260,672, 감소 아니라 증가 — 순수 삭제된 Tier-B 함수 5개+죽은 `randomTumble()`은 합쳐도 1.4KB 남짓인데 이를 대체하는 클라이언트 실행기+엄격 게이팅 로직이 더 큼), 신규 서버 코드 9,661B(`_lib.js` 7,072B + `bootstrap.js` 1,057B + `next.js` 1,532B). bootstrap 응답 1,171B/첫 요청 약 58ms/파싱 0.04ms, next 응답 710B/약 5ms/파싱 0.03ms. 전환 1회당 `takeRecipe()` 24회 호출에 누적 0.9ms(평균 0.0375ms/회) — 프레임 예산(16.6ms) 대비 무시할 수준. bootstrap 500·타임아웃·next 500 반복·오프라인 드래그·중복 refill·재시도 후 자동 복구 6개 장애 시나리오 모두 Playwright로 주입 검증(화면 정지 없음, 콘솔 미처리 예외 없음).
+- **코드 리뷰로 발견해 즉시 수정한 버그 2건**: ①`.spatial-hero.is-bootstrapping{pointer-events:none}`을 히어로 섹션 전체(`#spatialIntro`)에 걸어버려서, 부트스트랩이 느릴 때(최악 3초) "상담 신청"/"포트폴리오 보기" CTA와 분류 바로가기 링크까지 함께 클릭 불가능해지는 회귀 — `.torus-shell`/`.network-shell`에만 `pointer-events:none`을 걸도록 좁힘, Playwright로 부트스트랩 지연 중 CTA 클릭 성공을 재확인. ②`randomTumble()`(호출부 0곳인 기존 죽은 코드)이 이번에 삭제한 `tumbleSpinDesc()`를 여전히 참조해 "언젠가 다시 연결되면 즉시 `ReferenceError`" 상태로 남아 있던 것 — 함께 삭제.
+- **설계 재조정: "복사해도 동작"에서 "복사하면 정상 동작 안 함"으로(2026-08-30 같은 날 추가 수정)**: 최초 구현은 부트스트랩 실패 시에도 로컬 fallback(랜덤 모드/그룹 선택 + 고정 폴백 레시피)으로 도넛·네트워크가 계속 "잘" 동작했는데, 이는 사용자의 실제 목적(프런트 소스만 복사해서는 가상공간이 제대로 안 돌아가야 함)과 정반대였다. **재설계**: `renderTorus()`/`applySpatialMode()`를 호출하는 `spatialStartRender()`는 이제 부트스트랩이 **실제로 성공했을 때만**(재시도 1초→2초→4초, 최대 3회 후에도 실패하면 포기) 실행되고, 실패 시엔 아무 카드도 렌더링하지 않은 채 "다시 시도" 버튼만 노출하며 모드 토글 버튼도 `disabled` 처리해 둔다. 단, **이미 부트스트랩에 성공한 뒤의 세션 중 `/next` 리필 실패**는 여전히 기존처럼 관대하게(폴백 레시피 1종으로) 넘어간다 — 최초 진입 시점만 "서버가 실제로 응답해야 한다"는 엄격한 게이트를 걸고, 이미 정상 발급받은 세션의 일시적 재요청 실패까지 화면을 멈추게 하진 않는다는 구분. Playwright로 3가지 시나리오 모두 재검증: 실제 서버 있는 정상 사이트는 변화 없이 그대로 빠르게(~67ms) 렌더링됨, `api/` 없이 `index.html`만 복사해 순수 정적 서버로 띄운 경우 카드가 하나도 안 뜨고 토글도 비활성화된 채 "다시 시도"만 남음(수동 재시도도 계속 실패, 진짜로 복사본에서는 못 돔), 부트스트랩이 2번 500 에러 후 3번째에 성공하는 일시 장애 시나리오는 자동으로 정상 복구됨.
+
+### 주의사항
+- `torusGroups`를 만지는 다른 작업을 할 때, 이 리팩터링으로 인해 가상공간 자체는 서버 응답(모드/전면 그룹/궤도 초기값/레시피)에 의존하게 됐지만 **콘텐츠 자체(라벨·설명·art 번호)는 여전히 100% 클라이언트에 있다** — 데이터 월/포트폴리오/원본보기 관련 작업은 이 리팩터링 이전과 완전히 동일하게 다루면 된다.
+- `index.html` 검증 스크립트(`tools/validate_site.py`)가 `"console." not in source`를 강제한다 — 이 파일에 새 디버그 로그를 추가하고 지우는 걸 잊으면 빌드가 실패한다.
+- 로컬 개발 서버 포트는 8000이 아니라 **8010**이다(`tools/local-server.js`의 `LOCAL_PORT` 기본값). `api/` 아래 새 엔드포인트를 추가하면 `tools/local-server.js`의 라우팅 분기에도 수동으로 등록해야 로컬에서 동작한다(Next.js `app/api/`는 실제로 빌드·배포되지 않는 죽은 코드 — [[deploy-requires-explicit-permission-every-time]] 메모와 무관하게, 이 프로젝트는 Vercel의 `api/*.js` 구식 서버리스 함수만 실제로 라우팅된다).
+- `SPATIAL_SIGNING_SECRET` 환경변수가 없으면 두 엔드포인트 모두 503을 반환한다(의도된 동작) — `.env.example`에 자리표시자가 있으니 새 환경(신규 배포 타깃 등)에 배포할 때 실제 값을 채워 넣는 걸 잊지 말 것.
+
+## 가상공간 서버 캡슐화 2차 강화 — 우회 취약점 폐쇄(2026-08-30)
+
+1차 작업 직후, 사용자가 직접 문제를 제기하고 실제로 재현·검증한 치명적 결함이 있었다: `spatialStartRender()`(부트스트랩 성공 시에만 실행되도록 `.then()` 게이트를 건 렌더 트리거 함수)를 브라우저 콘솔에서 **직접 한 줄만 호출**하면, `spatialConfig.mode`에 남아있던 `Math.random()` 공짜 fallback과 `SPATIAL_FALLBACK_RECIPE`/로컬 jitter 공식 덕분에 **API 없이도 카드 8개가 뜨고 드래그까지 완전히 정상 작동**했다 — 즉 게이트는 "언제 호출되는지"만 막았지 "그 함수 자체가 검증된 데이터 없이 동작하는지"는 전혀 막지 못하고 있었다.
+
+**수정**: `spatialApplyPayload()`(진짜 fetch 성공 시에만 호출됨)에서만 `true`로 바뀌는 `spatialVerified` 플래그를 추가하고, `spatialStartRender()`/`takeRecipe()`/`nextNetSlot()` **각 함수 내부**(호출부가 아니라)에 `if(!spatialVerified)return`류 가드를 심었다 — 이제 저 함수들을 콘솔에서 직접 불러도 진짜 서버 데이터 없이는 완전히 무동작이다. `spatialConfig.mode`의 `Math.random()` 기본값도 제거(`null`로 변경). 세션이 한 번이라도 정상 확립되면 `spatialVerified`는 계속 `true`로 유지되어, 그 이후의 `/next` 일시 실패에 대한 관대한 폴백(기존 복원력 요구사항)은 그대로 보존된다.
+
+**정직한 한계**: `spatialVerified`도 결국 스크립트 전역 변수라, `spatialVerified=true`로 직접 바꾸고 `spatialConfig`/`recipeBuffer`/`netPool`을 손수 그럴듯하게 채운 뒤 호출하면 여전히 재현 가능하다(재검증 완료 — 이 경로는 여전히 막을 수 없음을 확인했고, 사용자에게 사전 고지함). 브라우저에 전달된 JS는 결국 그 브라우저 통제하에 있다는 근본 한계이며, 이번 수정은 "함수 한 줄 호출"에서 "코드를 읽고 여러 상태를 정확히 손으로 재구성"으로 실행 난이도를 높이는 정도다.
+
+**추가로 옮긴 것**: 콘텐츠와 무관한 전환 타이밍/임계값 상수 6개(`SPATIAL_SCATTER_OUT_MS`/`IN_MS`/`DIST`/`BOUNCE_MS`/`AUTO_EXPLODE_TORUS_VELOCITY`/`NETWORK_VELOCITY`)를 `api/spatial/_lib.js`의 `timingPolicy()`로 옮기고 `spatialConfig`를 통해 소비하도록 변경(`bootstrap` 응답의 `cfg` 필드로 전달). 8개 사용 지점을 전부 `spatialConfig.xxx` 직접 참조로 교체 — **예전에 `NETWORK_RING_SCALE_FALL`을 `const` 선언 시점에 박아넣으려다 실패했던 것과 같은 함정(비동기 값이 동기 선언 시점엔 아직 없음)을 반복하지 않기 위해, 반드시 각 호출부에서 매번 읽도록 했다.**
+
+**계속 제외한 것(이유 재확인)**: `NETWORK_RING_SCALE_FALL`/`OPACITY_FALL`과 `.42`/`.28` 하한 — `predictRingRestState()`(허브 리트릿 예측, [[torus-network-scatter-variety]] 참고)와 공유되어 회귀 위험이 이득보다 크다는 1차 판단 유지. `torusGroups`/`childTorusItems`류도 데이터 월(`archiveItems`가 `subgroup.title`/`subgroup.arts.indexOf()`까지 실제로 참조) 의존성 때문에 여전히 이전 불가 — 게다가 최초 진입 화면은 애초에 `torusItems=torusGroups`를 그대로 참조할 뿐 `childTorusItems`류를 호출하지 않아서, "최초 렌더용 조합 로직"이라는 이전 대상 자체가 없었다.
+
+**실측**: `index.html` 순변화 **+4,833B**(256,183→261,016, 이번 라운드에서 +344B 추가 증가), 서버 코드 10,079B(+418B), bootstrap 응답 평균 1,275B(+~100B, `cfg` 필드 추가분). 전환 1회당 `takeRecipe()` 오버헤드 여전히 0.9ms대(무시 가능). FPS 재측정 결과 60.0(20ms 초과 프레임 0/180) — 이전 라운드 대비 회귀 없음, 오히려 측정 노이즈 범위 내에서 더 안정적으로 나옴. 우회 시나리오 3종 모두 Playwright로 재검증: ①`spatialStartRender()` 직접 호출 → 카드 0개(차단됨, 이전엔 8개였음) ②`spatialConfig` 필드만 손수 채우고 호출(단 `spatialVerified` 미설정) → 여전히 카드 0개(차단됨) ③정상 세션 확립 후 `/next` 반복 실패 → 카드 정상 유지(관대한 폴백 보존, 회귀 없음).
+
+## torusGroups 서버 이전 — 포트폴리오·데이터 월까지 게이팅 확장(2026-08-31)
+
+사용자가 전제를 "가상공간만"에서 "메인 페이지 전체, 관련 있으면 다른 기능에 걸쳐도 됨"으로 명시적으로 확장하고 오버헤드만 없으면 무조건 서버로 옮기라고 확인해서, 그동안 [[archive-wall-magnet-system]]/[[portfolio-datawall-category-colors]] 등 공유 의존성 때문에 계속 제외해왔던 `torusGroups`(작품 계층 데이터, 라벨·설명·하위그룹·art 번호)를 마침내 서버 전용으로 옮겼다.
+
+**실제 위험이 예상보다 훨씬 컸다**: `index.html`은 `DOMContentLoaded` 같은 생명주기 분리 없이 단일 스크립트가 한 번에 실행되는데, `torusGroups`에서 파생된 `viewerGroups`/`archiveItems`가 최상위(함수 밖) 동기 코드 10곳 이상에서 직접 참조되고 있었다. 그중 `activeCollection=viewerGroups[0].items`(모달 초기 상태)와 `initialTorusCandidates`/`initialTorusGroup` 계산은 `torusGroups`가 비어 있으면 **즉시 예외를 던져 그 뒤의 모든 코드(가상공간·디스크메뉴·상담모달 포함)가 실행되지 않는** 치명적 지점이었다 — Explore 에이전트로 정밀 조사해서 미리 찾아내고, 사용자에게 이 위험을 재보고해서 "신중히 구현하고 철저히 검증"하는 조건으로 재확인받은 뒤 진행했다.
+
+- **서버 데이터 형식**: 코덱스가 제안한 압축 숫자ID 튜플 형식 대신, **기존 클라이언트 파생 로직을 그대로 재사용**하기 위해 지금과 거의 동일한 배열 형태(`{art,label,title,desc,direct,parentFirst?,subgroups:[{label,title,arts}]}` 8개)로 `api/spatial/_lib.js`의 `sceneHierarchy()`가 반환, `bootstrap` 응답의 `hier` 필드로 전달(새 API 호출 없음). `pptRepresentatives`/`pptSequences`/`mascotArts` 참조는 `public/portfolio/ppt-manifest.js`의 실제 값으로 서버에서 미리 해석(이미 공개된 정적 파일 값이라 새로 노출되는 비밀 없음).
+- **게이팅 범위를 최소화**: 아카이브 월의 매직넷/슬립모드/핀치 리사이즈/클릭 위임 리스너는 **이미 컨테이너에 걸려 있고 자식을 호출 시점에 지연 조회하는 구조**라서 전혀 손대지 않았다(재검증만). 실제로 옮긴 건 `torusGroups` 재대입 + 파생 데이터 재계산(`rebuildSceneData()`) + 포트폴리오 그리드/데이터 월 DOM 생성(`renderPortfolioGrid()`/`renderArchiveWall()`) + 이미지·비디오 옵저버 재등록 + 필터칩 재생성(`renderArchiveFilters()`) + `activeCollection` 대입 — 이 전부를 새 함수 `renderSceneContent()`로 묶어 부트스트랩 성공 후 1회 호출.
+- **`initialTorusCandidates`/`initialTorusGroup`을 `spatialStartRender()` 내부로 이동**: 최상위 상수로 두면 `torusGroups=[]`일 때 즉시 던지므로, 이미 `spatialVerified` 게이트 뒤에 있는 `spatialStartRender()` 안에서 매 호출 시 그때의(이미 실데이터인) `torusGroups`로 새로 계산하도록 변경 — 예전에 `NETWORK_RING_SCALE_FALL`을 상수 선언 시점에 박아넣으려다 실패했던 것과 같은 "동기 선언 vs 비동기 값" 함정을 다시 반복하지 않기 위함.
+- **로딩/실패 UI**: `#portfolio`/`#archive`에 `.is-scene-loading`(히어로의 `spatial-pulse` 키프레임 재사용) + `.scene-retry` 버튼(히어로의 `.spatial-retry`와 동일 패턴)을 새로 추가, 같은 부트스트랩 흐름에 연결.
+
+**실측(2026-08-31, Playwright)**: `index.html` **260,406B** — 직전 라운드(2차 종료 시점) 261,016B 대비 **-610B 감소**(처음으로 이번 라운드만 놓고 보면 순수 삭제량이 신규 코드량을 앞지름, `torusGroups` 리터럴 자체가 2,807B로 컸기 때문). 원본(256,183B) 대비 누적 순변화는 +4,223B 증가. 서버 코드 13,667B(1차 종료 시점 10,079B 대비 +3,588B). bootstrap 응답 3,913B(+hier 필드), 네트워크 왕복 ~61ms, 파싱 0.11ms. FPS 58.9(직전 60.0 대비 노이즈 범위 내, 프로젝트 전체에서 일관되게 관찰되는 96~99% 범위). 정상 동작 전량 재검증: 포트폴리오 13개+카테고리 색상, 데이터 월 85개 썸네일+필터 9개+이미지 지연로딩 83/83 정상 해석, 매직넷/슬립모드(모달 닫은 뒤 `archiveWallInteracting=false` 정상 재개, 과거 버그 재발 없음), 포트폴리오/아카이브 클릭→모달 정상, 도넛 드래그·모드전환 정상, 필터 적용/해제 정상. **복제 방지 재검증(이번 라운드의 핵심 성공 기준)**: API 없는 정적 복사본에서 가상공간뿐 아니라 **포트폴리오·데이터 월도 카드 0개+재시도 버튼**으로 확인(이전엔 히어로만 막혔음), 이 상태에서 `pageerror` 0건(최상위 동기 코드 10곳 이상을 전부 안전 기본값으로 방어해서 페이지 전체가 하얗게 멈추는 사고 없음).
+
+### 주의사항
+- `torusGroups`는 이제 `let`이고 초기값이 `[]`다 — `rebuildSceneData()`/`renderSceneContent()`가 호출되기 전(부트스트랩 완료 전)에는 `viewableTorusGroups`/`archiveItems`/`viewerGroups`도 전부 빈 배열이다. 이 데이터를 새로 참조하는 코드를 최상위(함수 밖)에 추가하면 반드시 안전 기본값을 걸어야 한다 — 이번에 발견한 것과 같은 즉시-예외 패턴이 재발할 수 있다.
+- 포트폴리오 그리드(`#portfolioGrid`)/데이터 월(`#archiveWall`)은 이제 `renderPortfolioGrid()`/`renderArchiveWall()`을 직접 호출해야 채워진다 — 과거처럼 스크립트 실행만으로 자동으로 채워지지 않는다.
+- 아카이브 월 인터랙션(매직넷/슬립모드/핀치/필터)은 손대지 않았다 — 데이터가 늦게 채워져도 자연히 동작하는 기존 지연조회 구조를 그대로 신뢰한 것이니, 이 부분에서 새 버그가 나면 이번 변경이 원인일 가능성은 낮고 [[archive-wall-magnet-system]]/[[network-click-hit-test-evolution]]류의 기존 이슈일 가능성이 높다.
+
+**후속 정리(2026-08-31, 같은 날)**: bootstrap 응답에 실려 있던 `ring` 필드(`ringPolicy()`, `{sf,of,sfl,ofl}`)가 클라이언트 어디서도 읽히지 않는 죽은 필드였음을 발견 — 1차 작업 때 `predictRingRestState()` 공유 위험 때문에 `NETWORK_RING_SCALE_FALL` 등을 `spatialConfig`로 배선하지 않기로 한 결정이 있었는데, `spatialConfig`에 필드(`ringScaleFall` 등)와 `spatialApplyPayload()`의 대입 코드, 서버의 `ringPolicy()`까지는 만들어놓고 실제 소비 지점(`buildNetworkData`/`predictRingRestState`)에는 끝내 연결 안 한 채 남아있던 것. `api/spatial/_lib.js`/`bootstrap.js`/`index.html` 3곳에서 전부 제거(기능 변화 없음, 응답 크기만 -60B, `index.html` -263B). Playwright로 회귀 없음 재확인.
+
 ## 원본 보기 화면
 
 - 좌우 스와이프 및 화면 양끝 25% 클릭 이동을 지원한다.
@@ -594,6 +647,7 @@ python tools/validate_site.py
 
 - 위 명령 실행 후 `index.html`과 `dist/index.html`에 변경이 모두 반영됐는지 확인한다.
 - 과거에 원본만 수정하고 `dist`를 빌드하지 않아 화면에서 변경이 보이지 않았던 문제가 있었다. 같은 실수를 반복하지 않는다.
+- **가상공간(도넛/네트워크) 관련 확인은 반드시 `npm run dev:local`(8010번 포트, `tools/local-server.js`)로 해야 한다.** 2026-08-30 이후 가상공간의 초기 렌더링이 `/api/spatial/bootstrap` 응답을 실제로 받아야만 동작하도록 바뀌어서, `dist/`를 그냥 정적 서버(예: `python -m http.server 8000`)로만 띄우면 API가 없어 카드가 하나도 안 뜨는 "복사본과 동일한 상태"가 된다(의도된 동작 — [[spatial-bootstrap-server-encapsulation]] 참고). 가상공간과 무관한 작업(포트폴리오/데이터월/FAQ 등)만 확인할 땐 기존처럼 8000번 정적 서버도 무방하다.
 
 ## 백업 및 배포 기록
 
