@@ -71,9 +71,20 @@ async function serve(req, res) {
   fs.createReadStream(file).pipe(res);
 }
 
-const host = process.env.LOCAL_HOST || '127.0.0.1';
-http.createServer((req, res) => Promise.resolve(serve(req, res)).catch(error => {
+const host = process.env.LOCAL_HOST || '0.0.0.0'; // 기본값을 0.0.0.0으로 — 재시작마다 LOCAL_HOST를 안 챙겨도 항상 휴대폰 접속 가능. 이 PC만으로 제한하려면 LOCAL_HOST=127.0.0.1로 명시.
+const server = http.createServer((req, res) => Promise.resolve(serve(req, res)).catch(error => {
   console.error(error);
   if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify({ error: 'Local server error' }));
-})).listen(port, host, () => console.log(`VIZENTIVE local server: http://${host === '0.0.0.0' ? '<이 PC의 로컬 IP>' : host}:${port}`));
+}));
+// 포트 충돌(EADDRINUSE)을 처리 안 하면 Node가 스택트레이스만 던지고 죽어서 "왜 안 되는지" 알기 어려움 —
+// 대부분의 원인은 이미 다른 터미널/세션에서 서버가 떠 있는 것이므로 그 안내를 명확히 하고 종료.
+server.on('error', error => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`포트 ${port}가 이미 사용 중입니다 — 다른 터미널/세션에서 로컬 서버가 이미 실행 중일 가능성이 높습니다.`);
+    console.error(`   http://127.0.0.1:${port} 로 먼저 접속해 이미 떠 있는지 확인해보세요. 그래도 새로 띄우려면 기존 프로세스를 먼저 종료하세요.`);
+    process.exit(1);
+  }
+  throw error;
+});
+server.listen(port, host, () => console.log(`VIZENTIVE local server: http://${host === '0.0.0.0' ? '<이 PC의 로컬 IP>' : host}:${port}`));

@@ -5,19 +5,19 @@ const TOKEN_TTL_SEC = 900; // 15 minutes
 const REFRESH_WINDOW_SEC = 120; // /next re-issues a token when <2 min remain
 
 // Response size caps — enforced server-side regardless of what a client requests.
-const MAX_REC = 20;
+const MAX_REC = 60;
 const MAX_NET = 16;
-const BOOTSTRAP_REC_COUNT = 20;
-const BOOTSTRAP_NET_COUNT = 16;
-const NEXT_DEFAULT_REC_COUNT = 10;
-const NEXT_NET_COUNT = 12;
+const BOOTSTRAP_REC_COUNT = 60;
+const BOOTSTRAP_NET_COUNT = 32;
+const NEXT_DEFAULT_REC_COUNT = 40;
+const NEXT_NET_COUNT = 24;
 
-// Mirrors index.html's initialTorusCandidates count: 8 torusGroups total, 2 excluded
-// ('원페이지 릴스','카드뉴스') by the client's own content-aware filter -> 6 eligible.
+// Mirrors index.html's initialTorusCandidates count: 10 torusGroups total, 2 excluded
+// ('원페이지 릴스','카드뉴스') by the client's own content-aware filter -> 8 eligible.
 // This is a structural count only (no labels/content) kept in sync manually; the client
 // bounds-checks the picked index against its real candidate count before using it, so a
 // future content change here is a display-quality issue, not a correctness bug.
-const ELIGIBLE_TORUS_CANDIDATE_COUNT = 6;
+const ELIGIBLE_TORUS_CANDIDATE_COUNT = 8;
 
 const SCATTER_KIND_COUNT = 7; // matches client SPATIAL_SCATTER_KINDS.length
 const AXIS_INDEX = { X: 0, Y: 1, Z: 2 };
@@ -80,13 +80,15 @@ function clampCount(rawValue, def, max) {
 // --- Transition recipe generation (moved from index.html's randomScatterKind/pickPathStyle/
 // fancySeed/tumbleSpinDesc/randomSpinDesc — see docs/PROJECT_HISTORY.md for the mapping). ---
 
+// 2026-09-03: 'plain'(index 4, 밋밋한 직선 이동)을 완전히 제거 — 사용자 명시 요청("항상 다양한 효과로만
+// 전환해줘, 단순 효과로 넘어가는 루틴은 빼줘"). 원래 4종(bounce/orbit/wave/loop)의 상대 비중(13:9:9:9)은
+// 그대로 유지한 채 plain 몫(60%)만 나머지 4종에 비례 배분 — bounce 32.5%, orbit/wave/loop 각 22.5%.
 function pickPathStyleIndex() {
   const r = Math.random();
-  if (r < 0.13) return 0; // bounce
-  if (r < 0.22) return 1; // orbit
-  if (r < 0.31) return 2; // wave
-  if (r < 0.4) return 3; // loop
-  return 4; // plain
+  if (r < 0.325) return 0; // bounce
+  if (r < 0.55) return 1; // orbit
+  if (r < 0.775) return 2; // wave
+  return 3; // loop
 }
 
 function randomSpin() {
@@ -184,7 +186,13 @@ function sceneHierarchy() {
       { label: '비젠티브 마스코트', title: '비젠티브 마스코트', arts: [98, 22] },
     ] },
     { art: 6, label: '뷰티 광고', title: '뷰티 광고', desc: '제품의 분위기와 효능을 감각적으로 보여주는 뷰티 광고 비주얼', direct: true, subgroups: [
-      { label: '뷰티 광고', title: '뷰티 광고', arts: [6, 26, 27, 28, 29, 30, 31, 32, 23, 33, 34, 35, 36, 37, 38, 39] },
+      { label: '뷰티 광고', title: '뷰티 광고', arts: [6, 26, 27, 28, 107, 108, 109, 110] },
+    ] },
+    { art: 29, label: '수분크림', title: '수분크림', desc: '깊은 수분감과 청량한 사용감을 강조한 모이스처 크림 캠페인 비주얼', direct: true, subgroups: [
+      { label: '수분크림', title: '수분크림', arts: [29, 30, 31, 32, 99, 100, 101, 102, 103, 104, 105, 106] },
+    ] },
+    { art: 23, label: '버블세럼', title: '버블세럼', desc: '말차 성분의 청량한 버블감과 수분 충전 효과를 강조한 세럼 캠페인 비주얼', direct: true, subgroups: [
+      { label: '버블세럼', title: '버블세럼', arts: [23, 33, 34, 35, 36, 37, 38, 39] },
     ] },
     { art: 42, label: '헬스 광고', title: '헬스 광고', desc: '건강한 일상과 제품 메시지를 연결한 헬스 광고 비주얼', direct: true, subgroups: [
       { label: '헬스 광고', title: '헬스 광고', arts: [41, 42, 43, 44, 45, 46] },
