@@ -1046,6 +1046,7 @@ python tools/validate_site.py
   - 베타5-크럼블 타일 효과: `backups/vizentive-베타5-크럼블타일효과.zip`/`.bundle`(커밋 `f37d76e`) — clip-path 다각형을 SVG 마스크 타일 격자로 교체 직후
   - 베타5-바탕화면 일단락: `backups/vizentive-베타5-바탕화면일단락.zip`/`.bundle`(커밋 `2c25877`) — 전환 3모드(스캔라인/크럼블/큰타일) 통합+밝기·머리센서 버그 수정+타이머 통합 직후, 이 라운드의 마지막 백업. 상세 내역은 [[mascot-sand-crumble-tile-mask]] 메모리 참고.
   - 베타5-전환순차화및잔상수정: `backups/vizentive-베타5-전환순차화및잔상수정.zip`/`.bundle`(커밋 `4c73796`) — 전환 모드 선택 랜덤→순차 + 자동 전환(13초) 신설, 조립 모드 각도-크기 공식 실제 알파 기반 몸통 중심/반지름으로 재수정, "크럼블 잔상" 성능 버그 근본 원인 3단 확정·수정(SVG 타일 CSS 트랜지션 제거가 핵심, O(n²) 배열 shift 제거, 동시생존 조각 상한 추가) 직후 — 전부 Playwright 실측으로 검증 완료. 상세는 [[mascot-sand-crumble-tile-mask]] 참고.
+  - 베타5-메인모델전환효과일단락: `backups/vizentive-베타5-메인모델전환효과일단락.zip`/`.bundle`(커밋 `896286e`) — 조립 각도-크기 공식 cos→선형 매핑 재수정, 마스코트 PNG 8장→무손실 WebP(12.97MB→6.84MB), 도넛 idle 루프+마스코트 자동전환 둘 다 화면가시성 게이트 추가(IntersectionObserver+1초 폴백), 데이터 월 영상 중복 다운로드 제거(포스터+배지로 교체, 페이지 전체 27→14.78MB) 직후, 이 라운드의 일단락 백업. 상세는 [[mascot-sand-crumble-tile-mask]], [[home-page-load-perf]] 참고.
 
 ## 배포 절차
 
