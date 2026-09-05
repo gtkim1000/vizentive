@@ -155,7 +155,17 @@
     function spatialRecipeFromTuple(t){const k=t[0],p=t[1],s1=t[2],s2=t[3],s3=t[4],s4=t[5],s5=t[6];let sd;if(p===0)sd={bounces:s1,amp:s2,spin:{axis:SPATIAL_AXES[s3],deg:s4}};else if(p===1)sd={radius:s1,dir:s2,spin:{axis:SPATIAL_AXES[s3],deg:s4}};else if(p===2)sd={cycles:s1,amp:s2,dir:s3,spin:{axis:SPATIAL_AXES[s4],deg:s5}};else if(p===3)sd={dir:s1,spin:{axis:SPATIAL_AXES[s2],deg:s3}};else sd={spin:{axis:SPATIAL_AXES[s1],deg:s2}};return{k:SPATIAL_SCATTER_KINDS_MAP[k],p:SPATIAL_PATH_STYLES_MAP[p],sd}}
     function takeRecipe(){if(!spatialVerified)return null;if(recipeBuffer.length<=25)spatialRefillIfNeeded();return recipeBuffer.length?spatialRecipeFromTuple(recipeBuffer.shift()):SPATIAL_FALLBACK_RECIPE}
     function nextNetSlot(){if(!spatialVerified)return null;if(netPool.length<=15)spatialRefillIfNeeded();return netPool.length?netPool.shift():null}
-    function spatialApplyPayload(data){spatialVerified=true;if(Array.isArray(data.hier))torusGroups=data.hier;if(typeof data.mode==='number')spatialConfig.mode=data.mode;if(typeof data.torusPick==='number')spatialConfig.torusPick=data.torusPick;if(data.cfg){spatialConfig.scatterOutMs=data.cfg.soMs;spatialConfig.scatterInMs=data.cfg.siMs;spatialConfig.scatterDist=data.cfg.dist;spatialConfig.bounceMs=data.cfg.bounceMs;spatialConfig.autoExplodeTorusV=data.cfg.autoTorusV;spatialConfig.autoExplodeNetworkV=data.cfg.autoNetV}if(Array.isArray(data.net))netPool.push(...data.net);if(Array.isArray(data.rec))recipeBuffer.push(...data.rec);if(data.tok)spatialToken=data.tok}
+    function spatialApplyPayload(data){spatialVerified=true;if(Array.isArray(data.hier))torusGroups=data.hier;if(typeof data.mode==='number')spatialConfig.mode=data.mode;if(typeof data.torusPick==='number')spatialConfig.torusPick=data.torusPick;if(data.cfg){spatialConfig.scatterOutMs=data.cfg.soMs;spatialConfig.scatterInMs=data.cfg.siMs;spatialConfig.scatterDist=data.cfg.dist;spatialConfig.bounceMs=data.cfg.bounceMs;spatialConfig.autoExplodeTorusV=data.cfg.autoTorusV;spatialConfig.autoExplodeNetworkV=data.cfg.autoNetV}
+// 2026-09-05: "히어로 페이지 소스 최대한 서버로" — 마스코트 의상 갈아입기 전환에도 도넛/네트워크와
+// 동일한 복제 방지 패턴 적용. 마스코트 코드는 별도의 `(function(){...})()` 클로저라 이 함수(바깥
+// 스코프)에서 직접 그 안의 변수를 못 건드림 — 기존에 이미 쓰던 것과 같은 다리(`window.__applyTorusWheelZoom`
+// 등)를 하나 더 놓음(`window.__applyMascotConfig`, 마스코트 IIFE 안에서 정의). 이 호출이 실제로
+// 일어나야만(=서명된 세션 검증 통과) 마스코트 쪽 `mascotVerified`가 true가 되고, 그래야만
+// `playMascotTransition()`(수동 클릭·자동 전환 공통 진입점)이 실제로 동작함 — 호출 자체가 없으면
+// 마스코트는 기본 이미지만 보이고 클릭해도 조용히 아무 반응 없음(도넛의 "카드 0개+재시도"와 같은 원칙,
+// 여기선 "정지 화면"이 그 대응).
+if(data.mascotCfg&&window.__applyMascotConfig)window.__applyMascotConfig(data.mascotCfg);
+if(Array.isArray(data.net))netPool.push(...data.net);if(Array.isArray(data.rec))recipeBuffer.push(...data.rec);if(data.tok)spatialToken=data.tok}
     async function spatialFetchJson(url){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3000);try{const res=await fetch(url,{signal:controller.signal,headers:spatialToken?{'x-spatial-token':spatialToken}:{}});if(!res.ok)return null;return await res.json()}catch{return null}finally{clearTimeout(timer)}}
     function spatialScheduleRetry(){if(spatialRefillAttempt>=3)return;const delay=[1000,2000,4000][spatialRefillAttempt];spatialRefillAttempt++;setTimeout(()=>spatialRefillIfNeeded(),delay)}
     function spatialRefillIfNeeded(){if(spatialRefillInFlight)return;spatialRefillInFlight=true;spatialFetchJson('/api/spatial/next?count=40').then(data=>{if(data){spatialApplyPayload(data);spatialRefillAttempt=0}else{spatialScheduleRetry()}}).finally(()=>{spatialRefillInFlight=false})}
@@ -550,7 +560,18 @@ if(forcedMascotMode){const badge=document.createElement('div');badge.textContent
 // 좌표를 계산) 자동 전환 쪽에서 임의 좌표(0,0)로 호출해도 무방.
 let mascotModeSeq=0;
 function nextMascotMode(){return mascotModeSeq=mascotModeSeq%4+1}
+// 2026-09-05: "히어로 페이지 소스 최대한 서버로" — 도넛/네트워크(spatialVerified)와 동일한 복제 방지
+// 패턴을 마스코트 전환에도 적용. `mascotVerified`가 true가 되는 유일한 경로는
+// `window.__applyMascotConfig`(spatialApplyPayload가 실제 부트스트랩 성공 시에만 호출) — 아래
+// 숫자들의 사전값(0/Infinity)은 "그럭저럭 작동하는 안전한 기본값"이 아니라 의도적으로 기능을 죽이는
+// 값(0이면 조각 예산이 없어 아무것도 안 그려짐, autoMs=Infinity면 자동 전환 타이머가 영원히 안 울림)
+// — 실제 값은 오직 서버 응답으로만 채워짐. `playMascotTransition()` 맨 앞의 게이트가 진짜 방어선(도넛
+// 쪽 takeRecipe/nextNetSlot과 같은 원칙 — 호출부가 아니라 함수 내부에 심어야 우회가 안 됨)이고,
+// 나머지 상수들은 그 뒤에 실제로 도달했을 때 쓰이는 2차 방어선.
+let mascotVerified=false,mascotAutoMs=Infinity,mascotLiveCap=0,mascotTileBudget=0,mascotCellBudget=0,mascotScaleMax=0,mascotDistMaxRatio=0;
+window.__applyMascotConfig=function(cfg){if(!cfg)return;mascotVerified=true;mascotAutoMs=cfg.autoMs;mascotLiveCap=cfg.liveCap;mascotTileBudget=cfg.tileBudget;mascotCellBudget=cfg.cellBudget;mascotScaleMax=cfg.scaleMax;mascotDistMaxRatio=cfg.distMaxRatio};
 function playMascotTransition(clientX,clientY){
+  if(!mascotVerified)return;
   // 2026-09-05: 모드4 "조립"(assemble) 추가 — 크럼블(모드2/3)의 문자 그대로 반대: 새 이미지 조각이
   // 날아들어와 들러붙어 구성됨(sandSpread의 assembleMode 플래그, 자세한 원리는 sandSpread 내부 주석).
   const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:nextMascotMode();
@@ -589,9 +610,13 @@ let segmenterPromise=null;function loadSegmenter(){if(!segmenterPromise)segmente
 // 아직 mvCutout 준비도 안 됐을 수 있어 firedMascot은 0에서 시작 — 첫 자동 전환은 정확히 13초
 // 시점부터, 이후 26초·39초…로 이어짐(수동 클릭과 순번을 공유하는 로직은 위 nextMascotMode/
 // triggerAutoMascotTransition 참고).
+// 2026-09-05: 주기 자체(13000ms)도 마스코트 복제 방지 게이팅의 일부로 서버 값(mascotAutoMs)을 직접
+// 읽도록 변경 — 검증 전엔 Infinity라 `elapsed/Infinity`가 항상 0이 돼(firedMascot도 0에서 시작하므로
+// `0>0`은 거짓) 자동 전환 타이머 자체가 영원히 안 울림. `const`로 한 번 박아두면 나중에 값이 바뀌어도
+// 반영이 안 되므로(비동기 검증 완료 시점을 못 따라감) 매 tick마다 그때그때의 값을 다시 읽도록 함.
 (function(){
   const shineEl=document.querySelector('.title-shine'),brandEl=document.querySelector('.brand strong');
-  const PULSE_MS=3000,SHINE_MS=8000,BRAND_MS=11000,MASCOT_MS=13000;
+  const PULSE_MS=3000,SHINE_MS=8000,BRAND_MS=11000;
   const t0=performance.now();
   let firedPulse=-1,firedShine=-1,firedBrand=-1,firedMascot=0;
   function retrigger(el){if(!el)return;el.style.animation='none';void el.offsetWidth;el.style.animation=''}
@@ -603,7 +628,7 @@ let segmenterPromise=null;function loadSegmenter(){if(!segmenterPromise)segmente
     if(sc>firedShine){firedShine=sc;retrigger(shineEl)}
     const bc=Math.floor(elapsed/BRAND_MS);
     if(bc>firedBrand){firedBrand=bc;retrigger(brandEl)}
-    const mc=Math.floor(elapsed/MASCOT_MS);
+    const mc=Math.floor(elapsed/mascotAutoMs);
     if(mc>firedMascot){firedMascot=mc;triggerAutoMascotTransition()}
   }
   tick();
@@ -786,7 +811,7 @@ let sandLayerRemoveAt=0,inFlightLandings=0,liveCrumblePieces=0;
 // 원천 차단 — 타일 마스크 뒤집힘(실제 이미지가 바뀌어 보이는, 정확도에 필요한 부분)은 이 상한과
 // 무관하게 항상 그대로 실행되고, 상한을 넘겼을 때는 "장식용" 날아가는 조각 하나만 생략됨(이미 있는
 // alpha<=0 조기 반환과 동일한 패턴 — onLand는 정상 호출해 조립 모드 진행도 막히지 않음).
-const LIVE_PIECE_CAP=260;
+const LIVE_PIECE_CAP=mascotLiveCap;
 function spawnCrumblePiece(px,py,pw,ph,onLand){if(liveCrumblePieces>=LIVE_PIECE_CAP){if(onLand)onLand();return}const yFrac=(py+ph/2)/H,alpha=crumbleFadeAlpha(yFrac);if(alpha<=0){if(onLand)onLand();return}const el=document.createElement('div');el.style.cssText='position:absolute;left:'+px+'px;top:'+py+'px;width:'+pw+'px;height:'+ph+'px;background-image:url("'+crumbleBgURL+'");background-repeat:no-repeat;background-size:'+cRW+'px '+cRH+'px;background-position:'+(cOX-px)+'px '+(cOY-py)+'px;pointer-events:none;';sandLayer.appendChild(el);
 // 2026-09-05: "들러붙을 때 두 번 반복되는 느낌"의 원인 — assembleMode에서도 타일 마스크는 트리거되는 즉시
 // 뒤집혀 실제 to 픽셀이 그 자리에 바로 나타나는데, 그 위로 (같은 내용의) 날아드는 조각이 뒤늦게 도착해
@@ -930,7 +955,7 @@ let dx,dy,rotDeg,maxAge,kf;if(assembleMode){maxAge=420+Math.random()*480;
 // 들어맞고(정확히 중간값 .5, 코사인의 근사치 .707보다 스펙에 더 가까움), 정점 부근이 평평해지는 구간
 // 자체가 없어 0°~90° 전 구간에서 각도가 조금만 달라도 크기가 눈에 띄게 달라짐 — 매 줄마다 반복되던
 // "가운데 뭉텅이+바깥 급격한 테두리"의 좌우대칭 각짐이 완만한 그라데이션으로 풀림.
-const lx=px-bodyCenterX,R=bodyR,theta=Math.asin(Math.max(-1,Math.min(1,lx/R))),depthFactor=1-Math.abs(theta)/(Math.PI/2),startScale=1+depthFactor*2.6,distRand=Math.random(),farDist=(lx<0?-1:1)*distRand*W*.85;
+const lx=px-bodyCenterX,R=bodyR,theta=Math.asin(Math.max(-1,Math.min(1,lx/R))),depthFactor=1-Math.abs(theta)/(Math.PI/2),startScale=1+depthFactor*mascotScaleMax,distRand=Math.random(),farDist=(lx<0?-1:1)*distRand*W*mascotDistMaxRatio;
 if(window.__pieceDebug)window.__pieceDebug.push({px,py,W,R,lx,thetaDeg:Math.asin(Math.max(-1,Math.min(1,lx/R)))*180/Math.PI,depthFactor,startScale,farDist});
 dx=farDist;dy=0;rotDeg=0;kf=[{transform:'translate('+dx+'px,0px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,0px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}else{maxAge=320+Math.random()*380;const vx=windDir*(.05+Math.random()*.14),vy=-(.05+Math.random()*.13)-Math.random()*.02,vr=(Math.random()-.5)*.006;dx=vx*maxAge;dy=vy*maxAge;rotDeg=vr*maxAge*180/Math.PI;kf=[{transform:'translate(0px,0px) rotate(0deg)',opacity:alpha,offset:0},{transform:'translate('+(dx*.85)+'px,'+(dy*.85)+'px) rotate('+(rotDeg*.85)+'deg)',opacity:alpha,offset:.85},{transform:'translate('+dx+'px,'+dy+'px) rotate('+rotDeg+'deg)',opacity:0,offset:1}]}
 // 2026-09-05: "멀리서 날아오는 느낌이 하나도 안 든다" 재조사 — 클리핑(overflow:hidden) 수정 이후에도
@@ -1020,7 +1045,7 @@ let pendingIdx=0,pendingTilesIdx=0;function frame(now){if(t0===null)t0=now;const
 // 밀린 게 아무리 많아도 이번 프레임엔 일부만 보여주고 나머지는 다음 프레임(들)로 자연히 이어지도록
 // 함 — 느린 기기에서는 총 소요 시간이 늘어나는 대신(완료 판정은 이미 pending/active 잔량 기준이라
 // 자동으로 더 길게 이어짐) 매 프레임이 항상 "그때그때" 눈에 보이는 진행으로 나타남.
-let tileBudget=90;while(tileBudget>0&&pendingTilesIdx<tiles.length&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=20;while(cellBudget>0&&pendingIdx<cells.length&&(tRaw>=1||cells[pendingIdx].triggerY<=y)){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}if(window.__sandDebugLog)window.__sandDebugLog.push({t:now,pending:cells.length-pendingIdx,tiles:tiles.length-pendingTilesIdx,inFlight:inFlightLandings});if(tRaw<1||pendingIdx<cells.length||pendingTilesIdx<tiles.length||inFlightLandings>0)requestAnimationFrame(frame);else{svg.remove();wasEl.style.maskImage=wasEl.style.webkitMaskImage='';hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.zIndex='';if(pulseGlowEl)pulseGlowEl.style.maskImage=pulseGlowEl.style.webkitMaskImage='';costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);if(pulseGlowEl)pulseGlowStopPending=false;setTimeout(()=>sandLayer.remove(),Math.max(0,sandLayerRemoveAt-performance.now()));requestAnimationFrame(()=>{wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}
+let tileBudget=mascotTileBudget;while(tileBudget>0&&pendingTilesIdx<tiles.length&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=mascotCellBudget;while(cellBudget>0&&pendingIdx<cells.length&&(tRaw>=1||cells[pendingIdx].triggerY<=y)){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}if(window.__sandDebugLog)window.__sandDebugLog.push({t:now,pending:cells.length-pendingIdx,tiles:tiles.length-pendingTilesIdx,inFlight:inFlightLandings});if(tRaw<1||pendingIdx<cells.length||pendingTilesIdx<tiles.length||inFlightLandings>0)requestAnimationFrame(frame);else{svg.remove();wasEl.style.maskImage=wasEl.style.webkitMaskImage='';hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.zIndex='';if(pulseGlowEl)pulseGlowEl.style.maskImage=pulseGlowEl.style.webkitMaskImage='';costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);if(pulseGlowEl)pulseGlowStopPending=false;setTimeout(()=>sandLayer.remove(),Math.max(0,sandLayerRemoveAt-performance.now()));requestAnimationFrame(()=>{wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}
 function inkSpread(clickX,clickY){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height,vb=(next!==0&&vboundsFromFrac(costumeVBoundsFrac[next-1],toEl,W,H))||silhouetteVBounds(toEl,W,H)||{top:0,bottom:H},span=Math.max(30,vb.bottom-vb.top),dur=Math.max(422.5,Math.min(1605.5,span/(720/1605.5))),toElRect0=toEl.getBoundingClientRect(),wasElRect0=wasEl.getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1),fire=document.createElement('canvas');fire.className='mascot-veil mascot-fire-ring'+(next!==0?' mascot-fit-transform':'');if(next!==0){const srcEl=costumeEls[next];fire.style.setProperty('--fit-tx',srcEl.style.getPropertyValue('--fit-tx'));fire.style.setProperty('--fit-ty',srcEl.style.getPropertyValue('--fit-ty'));fire.style.setProperty('--fit-scale',srcEl.style.getPropertyValue('--fit-scale'));fire.style.transformOrigin=srcEl.style.transformOrigin}fire.style.zIndex='7';fire.style.filter='blur(3.5px)';fire.width=Math.round(W*dpr);fire.height=Math.round(H*dpr);const fctx=fire.getContext('2d');fctx.scale(dpr,dpr);const fireMaskEl=maskImgElForIdx(next),fmNatW=fireMaskEl.naturalWidth||W,fmNatH=fireMaskEl.naturalHeight||H,fmScale=Math.min(W/fmNatW,H/fmNatH),fmRW=fmNatW*fmScale,fmRH=fmNatH*fmScale,fmOX=(W-fmRW)/2,fmOY=(H-fmRH)/2,fireMaskCanvas=document.createElement('canvas');fireMaskCanvas.width=fire.width;fireMaskCanvas.height=fire.height;const fmctx=fireMaskCanvas.getContext('2d');fmctx.scale(dpr,dpr);fmctx.drawImage(fireMaskEl,fmOX,fmOY,fmRW,fmRH);mv.parentElement.appendChild(fire);toEl.style.zIndex='6';toEl.style.transition='none';toEl.style.opacity=next===0?'.5':'.72';toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.clipPath='inset(0 0 100% 0)';wasEl.style.transition='none';wasEl.style.maskImage=wasEl.style.webkitMaskImage='';wasEl.style.clipPath='inset(0 0 0 0)';if(next!==0)costumeEls[next].classList.add('is-active');updateSilhouetteForIdx(next);if(pulseGlowEl)pulseGlowEl.style.clipPath=toEl.style.clipPath;const t0=performance.now();function frame(now){const tRaw=Math.min(1,(now-t0)/dur),t=tRaw*(2-tRaw),y=vb.top+t*span,revealPct=Math.max(0,Math.min(100,y/H*100));toEl.style.clipPath='inset(0 0 '+(100-revealPct)+'% 0)';if(pulseGlowEl)pulseGlowEl.style.clipPath=toEl.style.clipPath;const screenY=toElRect0.top+(y/H)*toElRect0.height,wasLocalY=(screenY-wasElRect0.top)/wasElRect0.height*H,wasRevealPct=Math.max(0,Math.min(100,wasLocalY/H*100));wasEl.style.clipPath='inset('+wasRevealPct+'% 0 0 0)';drawScanLine(fctx,W,H,y);fctx.globalCompositeOperation='destination-in';fctx.drawImage(fireMaskCanvas,0,0,W,H);fctx.globalCompositeOperation='source-over';if(tRaw<1)requestAnimationFrame(frame);else{fire.remove();wasEl.style.clipPath='inset(100% 0 0 0)';hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.clipPath='';toEl.style.zIndex='';if(pulseGlowEl)pulseGlowEl.style.clipPath='';costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);requestAnimationFrame(()=>{wasEl.style.clipPath='';wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}let hitMoved=false,hitDownX=0,hitDownY=0;
 // 2026-09-04: 클리어스팟 모드 진입 후 손가락으로 드래그해 스팟을 옮기고 손을 떼면, 그 드래그 제스처의
 // 끝에서 브라우저가 합성 click 이벤트를 또 쏴서 아래 토글 로직이 방금 연 모드를 즉시 다시 꺼버리는 바람에

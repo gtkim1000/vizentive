@@ -173,6 +173,16 @@ function timingPolicy() {
   return { soMs: 1120, siMs: 1226, dist: 1700, bounceMs: 1300, autoTorusV: 0.12, autoNetV: 16 };
 }
 
+// 2026-09-05: 마스코트 의상 갈아입기(크럼블/조립 전환)에도 도넛/네트워크와 동일한 복제 방지 패턴을
+// 적용 — 값 자체는 timingPolicy()처럼 비밀은 아니지만(수십 차례 튜닝된 "손맛" 상수일 뿐), 클라이언트는
+// 이 응답을 실제로 받아야만(=서명된 세션 검증 통과) 전환 기능이 동작하도록 게이팅함(index.html의
+// mascotVerified). 값은 index.html에 기존에 있던 하드코딩 상수와 정확히 동일 — 클라이언트가 이 응답을
+// 못 받으면 기능 자체가(오류 없이 조용히) 아무 반응도 안 하는 것으로 확인됨(안전한 기본값으로 "그럭저럭
+// 작동"하지 않도록 의도적으로 설계, 도넛의 spatialVerified와 동일한 원칙).
+function mascotPolicy() {
+  return { autoMs: 13000, liveCap: 260, tileBudget: 90, cellBudget: 20, scaleMax: 2.6, distMaxRatio: 0.85 };
+}
+
 // Scene hierarchy — moved out of index.html's `torusGroups` literal (portfolio grid, data
 // wall, and the virtual-space hero all derive from this). References that used to point at
 // the public `public/portfolio/ppt-manifest.js` values (pptRepresentatives/pptSequences) and
@@ -237,5 +247,6 @@ module.exports = {
   generateRecipes,
   generateNetSlots,
   timingPolicy,
+  mascotPolicy,
   sceneHierarchy,
 };
