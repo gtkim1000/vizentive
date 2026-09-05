@@ -1041,6 +1041,11 @@ python tools/validate_site.py
 - 버튼 기준 모바일 브라우징 간격 조정: `ce1928b`
 - 베타5-가상공간서버보안 백업(가상공간 서버 캡슐화+로컬서버 Range/캐싱 개선+Ctrl+휠 대체 컨트롤 배포 직후): `backups/vizentive-베타5-가상공간서버보안.zip`, `backups/vizentive-베타5-가상공간서버보안.bundle`, 원격 태그 `베타5-가상공간서버보안`(커밋 `192c91b`)
 - 베타5-모델의상갈아입기 백업(마스코트 의상 갈아입기 기능+포트폴리오 신규 그룹+도넛/로컬서버 버그 수정 배포 직후): `backups/vizentive-베타5-모델의상갈아입기.zip`(git archive, 128MB), `backups/vizentive-베타5-모델의상갈아입기.bundle`(전체 refs, 138MB), 원격 태그 `베타5-모델의상갈아입기`(커밋 `70b3cfa`)
+- 2026-09-04~05 마스코트 크럼블(모래) 전환 재설계 시리즈 — **전부 로컬 전용 백업, 원격 미푸시** (사용자가 매번 "로컬만"으로 명시 요청, `main`이 `origin/main`보다 계속 앞서있는 상태):
+  - 베타5-크럼블 전환: `backups/vizentive-베타5-크럼블전환.zip`/`.bundle`(커밋 `a720375`) — was↔to 캔버스 복제 방식에서 inkSpread와 동일한 실제 DOM clip-path 방식으로 전면 재설계 직후
+  - 베타5-크럼블 타일 효과: `backups/vizentive-베타5-크럼블타일효과.zip`/`.bundle`(커밋 `f37d76e`) — clip-path 다각형을 SVG 마스크 타일 격자로 교체 직후
+  - 베타5-바탕화면 일단락: `backups/vizentive-베타5-바탕화면일단락.zip`/`.bundle`(커밋 `2c25877`) — 전환 3모드(스캔라인/크럼블/큰타일) 통합+밝기·머리센서 버그 수정+타이머 통합 직후, 이 라운드의 마지막 백업. 상세 내역은 [[mascot-sand-crumble-tile-mask]] 메모리 참고.
+  - 베타5-전환순차화및잔상수정: `backups/vizentive-베타5-전환순차화및잔상수정.zip`/`.bundle`(커밋 `4c73796`) — 전환 모드 선택 랜덤→순차 + 자동 전환(13초) 신설, 조립 모드 각도-크기 공식 실제 알파 기반 몸통 중심/반지름으로 재수정, "크럼블 잔상" 성능 버그 근본 원인 3단 확정·수정(SVG 타일 CSS 트랜지션 제거가 핵심, O(n²) 배열 shift 제거, 동시생존 조각 상한 추가) 직후 — 전부 Playwright 실측으로 검증 완료. 상세는 [[mascot-sand-crumble-tile-mask]] 참고.
 
 ## 배포 절차
 
