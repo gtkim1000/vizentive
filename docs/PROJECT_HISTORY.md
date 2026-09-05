@@ -1064,6 +1064,11 @@ python tools/validate_site.py
   - 베타5-전환순차화및잔상수정: `backups/vizentive-베타5-전환순차화및잔상수정.zip`/`.bundle`(커밋 `4c73796`) — 전환 모드 선택 랜덤→순차 + 자동 전환(13초) 신설, 조립 모드 각도-크기 공식 실제 알파 기반 몸통 중심/반지름으로 재수정, "크럼블 잔상" 성능 버그 근본 원인 3단 확정·수정(SVG 타일 CSS 트랜지션 제거가 핵심, O(n²) 배열 shift 제거, 동시생존 조각 상한 추가) 직후 — 전부 Playwright 실측으로 검증 완료. 상세는 [[mascot-sand-crumble-tile-mask]] 참고.
   - 베타5-메인모델전환효과일단락: `backups/vizentive-베타5-메인모델전환효과일단락.zip`/`.bundle`(커밋 `896286e`) — 조립 각도-크기 공식 cos→선형 매핑 재수정, 마스코트 PNG 8장→무손실 WebP(12.97MB→6.84MB), 도넛 idle 루프+마스코트 자동전환 둘 다 화면가시성 게이트 추가(IntersectionObserver+1초 폴백), 데이터 월 영상 중복 다운로드 제거(포스터+배지로 교체, 페이지 전체 27→14.78MB) 직후, 이 라운드의 일단락 백업. 상세는 [[mascot-sand-crumble-tile-mask]], [[home-page-load-perf]] 참고.
 
+**2026-09-06, "버젼5 - 의상갈아입기 소스 보안" — 이번엔 로컬+원격(`origin`) 둘 다 명시 요청받아 병행 백업**:
+- 로컬: `backups/vizentive-버젼5-의상갈아입기소스보안.zip`/`.bundle`(태그 `버젼5-의상갈아입기소스보안`이 가리키는 커밋)
+- 원격: `origin`에 `70b3cfa` 이후 전체(이미 배포된 `896286e`~`82e47d4` + 이 세션기록 문서 커밋 포함) 푸시 완료 + 태그 `버젼5-의상갈아입기소스보안`을 그 마지막 커밋에 생성해 origin에 푸시
+- 이 시점 포함 내용: 조립 각도-크기 선형 매핑, 마스코트 PNG→무손실 WebP, 도넛/마스코트 화면가시성 게이트, **마스코트 의상 갈아입기 전환의 서버 캡슐화(복제방지) 확장**(도넛/네트워크와 동일한 패턴 — `api/spatial/bootstrap`의 `mascotCfg` 필드로 서명된 세션 검증 없이는 전환 기능 자체가 동작 안 함), 그리고 **배포 직후 발견해 긴급 수정한 회귀**(`hero/mascot-worker.js`가 배포 산출물에서 누락돼 운영에서 마스코트 기능이 도입 시점부터 계속 먹통이었던 문제 — `public/hero/`로 이동 + 워커 무응답 타임아웃 추가). 실서버 재검증까지 완료된 상태에서의 백업. 상세는 [[spatial-bootstrap-server-encapsulation]] 6차, [[mascot-costume-ink-transition]], [[mascot-sand-crumble-tile-mask]], [[home-page-load-perf]] 참고.
+
 ## 배포 절차
 
 1. `python tools/validate_site.py`
