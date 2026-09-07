@@ -559,7 +559,8 @@ if(forcedMascotMode){const badge=document.createElement('div');badge.textContent
 // 어느 쪽 본문에서도 실제로 안 쓰이는 죽은 매개변수라(둘 다 화면 픽셀이 아니라 모델 실루엣 기준으로
 // 좌표를 계산) 자동 전환 쪽에서 임의 좌표(0,0)로 호출해도 무방.
 let mascotModeSeq=0;
-function nextMascotMode(){return mascotModeSeq=mascotModeSeq%4+1}
+// 2026-09-07: 모드5 "슬라이스" 추가 — 순환 모듈러스를 4→5로 확장(1→2→3→4→5→1…).
+function nextMascotMode(){return mascotModeSeq=mascotModeSeq%5+1}
 // 2026-09-05: "히어로 페이지 소스 최대한 서버로" — 도넛/네트워크(spatialVerified)와 동일한 복제 방지
 // 패턴을 마스코트 전환에도 적용. `mascotVerified`가 true가 되는 유일한 경로는
 // `window.__applyMascotConfig`(spatialApplyPayload가 실제 부트스트랩 성공 시에만 호출) — 아래
@@ -574,11 +575,12 @@ function playMascotTransition(clientX,clientY){
   if(!mascotVerified)return;
   // 2026-09-05: 모드4 "조립"(assemble) 추가 — 크럼블(모드2/3)의 문자 그대로 반대: 새 이미지 조각이
   // 날아들어와 들러붙어 구성됨(sandSpread의 assembleMode 플래그, 자세한 원리는 sandSpread 내부 주석).
-  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:nextMascotMode();
+  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:forcedMascotMode==='slice'?5:nextMascotMode();
   if(mode===1)inkSpread(clientX,clientY);
   else if(mode===2)sandSpread(clientX,clientY,1);
   else if(mode===3)sandSpread(clientX,clientY,3);
-  else sandSpread(clientX,clientY,1,true);
+  else if(mode===4)sandSpread(clientX,clientY,1,true);
+  else sandSpread(clientX,clientY,1,false,true);
 }
 // 2026-09-05: 클릭(수동) 없이도 마스코트 전환이 저절로 일어나는 "자동 전환" 신설 — 아래 통합 타이머
 // (테두리 깜빡임/헤드라인 반사광/로고 회전과 같은 tick)가 13초 경계를 넘을 때마다 호출. transitionBusy나
@@ -748,7 +750,15 @@ const cells=(cellsFrac||[]).map(c=>{const x=ox+c.xFrac*natW*scale,y=oy+c.yFrac*n
 // 그 .68을 그대로 재현한 회색(255*.68≈173)으로, 페이드 구간도 173→0으로 보간해 원래 밝기를
 // 시종일관 그대로 유지하도록 수정.
 function tileFadeFill(fade,yFrac){if(!fade)return'#fff';const REST=173;if(yFrac<=fade.start)return'rgb('+REST+','+REST+','+REST+')';if(yFrac>=fade.end)return'#000';const g=Math.round(REST*(1-(yFrac-fade.start)/(fade.end-fade.start)));return'rgb('+g+','+g+','+g+')'}
-function sandSpread(clickX,clickY,tileScale,assembleMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
+// 2026-09-07: 모드5 "슬라이스" 재설계 — 처음엔 완전히 별도의 함수(sliceSpread)로 새로 짰다가, 자체
+// SVG 마스크/타이밍 시스템을 새로 발명하면서 흰 배경이 비치는 등 문제가 반복 발생 — 사용자가 "다른
+// 모드와 방식은 완전히 같은데 슬라이스로 나가는 것만 다르다"고 명확히 재지적. 실제로 크럼블(이 함수)의
+// 타일 마스크 뒤집기(트리거 순간 즉시 wasEl 숨김+toEl 드러남, 100% 검증된 무결점 메커니즘)를 그대로
+// 재사용하고, 오직 "날아가는 조각"의 물리(sliceMode 분기, 아래 spawnCrumblePiece 참고)만 무작위
+// 방향 대신 순수 좌측 슬라이드로 바꾸면 충분함 — sliceSpread 함수 자체를 삭제하고 5번째 매개변수
+// sliceMode로 이 함수에 흡수. cols를 1로 고정해 타일 하나가 항상 폭 전체를 덮게 만드는 것만 다름
+// (rows는 크럼블과 동일한 avgCellH 역산식 그대로 재사용 — "크럼블 한 개의 높이" 요구사항 자동 충족).
+function sandSpread(clickX,clickY,tileScale,assembleMode,sliceMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
 // 2026-09-05: "새 이미지 조각이 날아와 들러붙어 구성되는" 반대 모드(조립) 추가 — 타일 리빌(마스크로
 // was를 지우고 to를 드러내는 로직)은 방향과 무관하게 완전히 동일하게 재사용하고, "날아다니는 조각"의
 // 텍스처 출처(was↔to)와 비행 방향(날아가기↔날아들어와 착지)만 assembleMode로 뒤집음 — 부서지는
@@ -762,6 +772,16 @@ const texSourceEl=assembleMode?toEl:wasSourceEl,
 // "도착"하는 게 겹쳐 보였음(둘 다 같은 to 텍스처를 보여주므로 유사한 내용이 두 번 나타나는 것처럼
 // 느껴짐). 조립 모드에서는 타일 트리거만으로 이미 이미지 전체가 1:1로 재구성되므로(사용자 요청으로
 // 스로틀도 제거됨) 앰비언트 조각이 더할 가치가 없음 — assembleMode일 때 이 스케줄 자체를 비움.
+// 2026-09-07: "모드2/3(크럼블)은 무조건 두 번 나온다, 모드4는 1번으로 이상없다" 신고 — 바로 위와
+// 완전히 같은 원인이 크럼블 쪽에도 그대로 있었음(그때는 assembleMode만 비웠었음). 크럼블도 타일 조각
+// 하나만으로 실루엣 전체가 이미 1:1로 리빌되므로 앰비언트 조각은 겹쳐 보일 뿐 — 직전 수정("유실 없이
+// 끝까지 다 보이게")으로 예전엔 LIVE_PIECE_CAP에 걸려 조용히 묻혔던 앰비언트 조각까지 이제 전부
+// 실제로 렌더링되면서 이 중복이 훨씬 뚜렷해진 것으로 보임.
+// 주의: 여기서 texCellsFrac 자체를 []로 비우면(1차 시도, 되돌림) cells 배열이 비어 아래 avgCellW/H
+// (타일 격자 밀도를 조각 크기에 맞춰 역산하는 기준)도 0이 돼 타일 그리드 자체가 훨씬 성기게(최대
+// 3080 대신 기본값 26x42=1092 등으로) 뭉개지는 부작용이 있었음 — 격자 밀도 계산용으로는 실측 cells가
+// 계속 필요하므로 texCellsFrac은 원래대로 두고, 대신 아래 pendingIdx 초기값을 cells.length로 시작해
+// "앰비언트 큐가 처음부터 이미 다 소진된 것"으로 취급 — 조각 스폰만 0개가 되고 격자 밀도는 그대로 유지.
 texCellsFrac=assembleMode?[]:wasCellsFrac;
 // 2026-09-05: 조립 모드 각도(theta) 계산용 "몸통 실제 좌우 범위"는 texCellsFrac(위에서 조립 모드일 때
 // 이미 []로 비워버림)과는 별개로 따로 챙겨둠 — 렌더링용 배열을 비우는 것과, 각도 계산이 참조할 진짜
@@ -813,6 +833,15 @@ const fitIdx=assembleMode?next:was;const sandLayer=document.createElement('div')
 // 인라인으로 명시.
 sandLayer.style.zIndex='7';sandLayer.style.position='fixed';sandLayer.style.left=r.left+'px';sandLayer.style.top=r.top+'px';sandLayer.style.width=W+'px';sandLayer.style.height=H+'px';sandLayer.style.opacity='1';sandLayer.style.pointerEvents='none';document.body.appendChild(sandLayer);
 let sandLayerRemoveAt=0,inFlightLandings=0,liveCrumblePieces=0;
+// 2026-09-07: "폰에서 프랙탈이 골고루 나오지 않고 몰려서 갑자기 나오거나, 양이 조금만 나오다 만다" 신고 —
+// 1차로 총 수요 대비 몇 개 중 하나만 렌더링하는 균등 샘플링(pieceStride)을 넣었었으나, 사용자가 "속도가
+// 느려도 되니 흩어지거나 조합되는 조각이 무조건 다 보여야 한다"고 명시적으로 재요청 — 샘플링(일부는
+// 애초에 안 그림) 자체를 폐기하고, 아래 frame() 루프의 while 조건에 liveCrumblePieces<LIVE_PIECE_CAP
+// 게이트를 걸어 "상한에 닿으면 그 타일/조각은 그냥 기다렸다가(다음 프레임에 재시도) 반드시 스폰"하는
+// 방식으로 교체 — pending 커서를 상한이 빌 때까지 전진시키지 않으므로 유실 없이 전환 시간만 늘어남
+// (완료 판정은 이미 pending 잔량 기준이라 자동으로 더 길게 이어짐, 기존 설계 그대로 재사용).
+// liveCrumblePieces 감소가 anim.onfinish에만 의존해 저사양 폰에서 콜백이 밀리면 상한이 실제보다 더
+// 오래 막히는 문제는 여전히 유효한 버그라 안전장치 타이머는 그대로 유지(아래 spawnCrumblePiece 참고).
 // 2026-09-05: "잔상" 조사 3단계 — 위 두 수정(SVG 트랜지션 제거, O(n²) shift 제거) 후에도 Playwright
 // 실측에서 여전히 가끔 안 끝나는 경우가 남아있어, 시간에 따라 동시에 살아있는 조각 DOM/애니메이션
 // 개수를 별도로(마스코트 코드와 무관하게) 폴링해보니 피크에 700개 이상이 동시에 재생 중이었음 —
@@ -822,7 +851,7 @@ let sandLayerRemoveAt=0,inFlightLandings=0,liveCrumblePieces=0;
 // 무관하게 항상 그대로 실행되고, 상한을 넘겼을 때는 "장식용" 날아가는 조각 하나만 생략됨(이미 있는
 // alpha<=0 조기 반환과 동일한 패턴 — onLand는 정상 호출해 조립 모드 진행도 막히지 않음).
 const LIVE_PIECE_CAP=mascotLiveCap;
-function spawnCrumblePiece(px,py,pw,ph,onLand){if(liveCrumblePieces>=LIVE_PIECE_CAP){if(onLand)onLand();return}const yFrac=(py+ph/2)/H,alpha=crumbleFadeAlpha(yFrac);if(alpha<=0){if(onLand)onLand();return}const el=document.createElement('div');el.style.cssText='position:absolute;left:'+px+'px;top:'+py+'px;width:'+pw+'px;height:'+ph+'px;background-image:url("'+crumbleBgURL+'");background-repeat:no-repeat;background-size:'+cRW+'px '+cRH+'px;background-position:'+(cOX-px)+'px '+(cOY-py)+'px;pointer-events:none;';sandLayer.appendChild(el);
+function spawnCrumblePiece(px,py,pw,ph,onLand){const yFrac=(py+ph/2)/H,alpha=crumbleFadeAlpha(yFrac);if(alpha<=0){if(onLand)onLand();return}const el=document.createElement('div');el.style.cssText='position:absolute;left:'+px+'px;top:'+py+'px;width:'+pw+'px;height:'+ph+'px;background-image:url("'+crumbleBgURL+'");background-repeat:no-repeat;background-size:'+cRW+'px '+cRH+'px;background-position:'+(cOX-px)+'px '+(cOY-py)+'px;pointer-events:none;';sandLayer.appendChild(el);
 // 2026-09-05: "들러붙을 때 두 번 반복되는 느낌"의 원인 — assembleMode에서도 타일 마스크는 트리거되는 즉시
 // 뒤집혀 실제 to 픽셀이 그 자리에 바로 나타나는데, 그 위로 (같은 내용의) 날아드는 조각이 뒤늦게 도착해
 // "이미 나타난 걸 또 한 번 착지시키는" 이중 노출처럼 보였음. 수정: assembleMode일 때는 타일 마스크를
@@ -967,7 +996,14 @@ let dx,dy,rotDeg,maxAge,kf;if(assembleMode){maxAge=420+Math.random()*480;
 // "가운데 뭉텅이+바깥 급격한 테두리"의 좌우대칭 각짐이 완만한 그라데이션으로 풀림.
 const lx=px-bodyCenterX,R=bodyR,theta=Math.asin(Math.max(-1,Math.min(1,lx/R))),depthFactor=1-Math.abs(theta)/(Math.PI/2),startScale=1+depthFactor*mascotScaleMax,distRand=Math.random(),farDist=(lx<0?-1:1)*distRand*W*mascotDistMaxRatio;
 if(window.__pieceDebug)window.__pieceDebug.push({px,py,W,R,lx,thetaDeg:Math.asin(Math.max(-1,Math.min(1,lx/R)))*180/Math.PI,depthFactor,startScale,farDist});
-dx=farDist;dy=0;rotDeg=0;kf=[{transform:'translate('+dx+'px,0px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,0px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}else{maxAge=320+Math.random()*380;const vx=windDir*(.05+Math.random()*.14),vy=-(.05+Math.random()*.13)-Math.random()*.02,vr=(Math.random()-.5)*.006;dx=vx*maxAge;dy=vy*maxAge;rotDeg=vr*maxAge*180/Math.PI;kf=[{transform:'translate(0px,0px) rotate(0deg)',opacity:alpha,offset:0},{transform:'translate('+(dx*.85)+'px,'+(dy*.85)+'px) rotate('+(rotDeg*.85)+'deg)',opacity:alpha,offset:.85},{transform:'translate('+dx+'px,'+dy+'px) rotate('+rotDeg+'deg)',opacity:0,offset:1}]}
+dx=farDist;dy=0;rotDeg=0;kf=[{transform:'translate('+dx+'px,0px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,0px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}
+// 2026-09-07: sliceMode(모드5) — 크럼블(else 기본 분기)의 무작위 방향 물리 대신, 조각이 폭 전체를
+// 덮는 가로 밴드이므로 순수 좌측 이동만 함(세로 이동·회전 없음, 요청하신 "옆으로 빠져나가는" 그대로).
+// 불투명도(alpha)는 크럼블처럼 끝에서 0으로 페이드하지 않고 시종일관 유지 — "부서져 흩어짐"이 아니라
+// "밀려나감" 느낌을 위함. dx는 밴드가 폭 W 전체를 차지하므로 그만큼(+여유 60px)만 이동하면 화면
+// 밖으로 완전히 빠짐(px는 항상 0, cols=1이라 이동 거리 계산에 자기 위치를 참조할 필요가 없음).
+else if(sliceMode){maxAge=460+Math.random()*160;dx=-(W+60);dy=0;rotDeg=0;kf=[{transform:'translate(0px,0px)',opacity:alpha,offset:0},{transform:'translate('+(dx*.85)+'px,0px)',opacity:alpha,offset:.85},{transform:'translate('+dx+'px,0px)',opacity:alpha,offset:1}]}
+else{maxAge=320+Math.random()*380;const vx=windDir*(.05+Math.random()*.14),vy=-(.05+Math.random()*.13)-Math.random()*.02,vr=(Math.random()-.5)*.006;dx=vx*maxAge;dy=vy*maxAge;rotDeg=vr*maxAge*180/Math.PI;kf=[{transform:'translate(0px,0px) rotate(0deg)',opacity:alpha,offset:0},{transform:'translate('+(dx*.85)+'px,'+(dy*.85)+'px) rotate('+(rotDeg*.85)+'deg)',opacity:alpha,offset:.85},{transform:'translate('+dx+'px,'+dy+'px) rotate('+rotDeg+'deg)',opacity:0,offset:1}]}
 // 2026-09-05: "멀리서 날아오는 느낌이 하나도 안 든다" 재조사 — 클리핑(overflow:hidden) 수정 이후에도
 // 안 느껴진 진짜 원인은 '거리'가 아니라 '이징 곡선'이었음. ease-out은 처음에 아주 빠르게 진행되는
 // 커브라, offset=.15처럼 극단적으로 이른 키프레임과 결합되면 전체 이동 거리의 85%가 재생시간의
@@ -980,7 +1016,15 @@ dx=farDist;dy=0;rotDeg=0;kf=[{transform:'translate('+dx+'px,0px) scale('+startSc
 // delay를 쓰면 fill:'forwards'만으로는 지연 구간 동안 첫 키프레임(멀리·투명)이 아직 적용 안 돼 원래
 // 자리에서 다 보이는 채로 잠깐 "번쩍"하다가 애니메이션이 시작되는 순간 갑자기 멀리로 튕겨나가는 것처럼
 // 보일 위험이 있음 — fill:'both'로 바꿔 지연 구간에도 첫 키프레임이 미리 적용되도록 함.
-liveCrumblePieces++;const startDelay=assembleMode?Math.random()*260:0;const anim=el.animate(kf,{duration:maxAge,delay:startDelay,easing:assembleMode?'linear':'ease-out',fill:'both'});anim.onfinish=()=>{liveCrumblePieces--;el.remove();if(onLand)onLand()};const endsAt=performance.now()+startDelay+maxAge;if(endsAt>sandLayerRemoveAt)sandLayerRemoveAt=endsAt}
+liveCrumblePieces++;
+// 2026-09-07: 조립 모드에만 있던 "같은 프레임 조각들의 시작 시점을 미세하게 흩어" 동시-팝업을 막는
+// startDelay를 크럼블(이탈) 모드에도 적용 — 지금까지 크럼블 쪽은 0으로 고정돼, 한 프레임에 최대
+// 110개(타일+조각)가 정확히 같은 순간 애니메이션을 시작해 "몰려서 갑자기 나오는" 것처럼 보였음.
+const startDelay=assembleMode?Math.random()*260:Math.random()*160;const anim=el.animate(kf,{duration:maxAge,delay:startDelay,easing:assembleMode?'linear':(sliceMode?'ease-in':'ease-out'),fill:'both'});
+// 2026-09-07: onfinish가 저사양 폰에서 메인스레드 정체로 지연될 경우를 대비해, 조각의 실제 수명(지연+
+// duration)에 맞춘 안전장치 타이머로도 동일하게 정리되도록 함(landed 가드로 이중 처리 방지) — 어느
+// 쪽이 먼저 오든 liveCrumblePieces가 실제보다 오래 부풀어있지 않도록 보정.
+let landed=false;const land=()=>{if(landed)return;landed=true;liveCrumblePieces--;el.remove();if(onLand)onLand()};anim.onfinish=land;setTimeout(land,startDelay+maxAge+240);const endsAt=performance.now()+startDelay+maxAge;if(endsAt>sandLayerRemoveAt)sandLayerRemoveAt=endsAt}
 // 2026-09-04: 날아가는 조각과 부서지는 크럼블 타일 크기를 맞추는 시도 2차 — 1차는 타일을
 // 고정(26x42)해두고 조각 쪽을 키우는 방향으로 갔는데, 그 결과 조각이 "너무 크다"는 재지적을
 // 받음 — 조각은 원래 크기(sandCellsFromAlpha 분모 50, 원복)로 되돌리고, 반대로 타일 쪽을 조각
@@ -994,7 +1038,9 @@ if(cells.length){for(const c of cells){avgCellW+=c.w;avgCellH+=c.h}avgCellW/=cel
 // tileScale배만큼 부풀려서 역산하면 타일 수가 그만큼 줄어(칸이 커짐) 3배 큰 타일이 됨. 기본값 1
 // (모드2, 지금까지의 동작과 동일).
 const ts=tileScale||1,
-      cols=avgCellW>1?Math.max(4,Math.min(44,Math.round(W/(avgCellW*ts)))):Math.max(4,Math.round(26/ts)),
+      // sliceMode: 타일 하나가 항상 가로 폭 전체를 덮도록 열(cols)을 1로 고정 — "가로로 크럼블 한 개의
+      // 높이만큼 잘라 옆으로 빠져나가는" 요청과 정확히 일치. rows(줄 높이)는 그대로 avgCellH 기반.
+      cols=sliceMode?1:(avgCellW>1?Math.max(4,Math.min(44,Math.round(W/(avgCellW*ts)))):Math.max(4,Math.round(26/ts))),
       rows=avgCellH>1?Math.max(4,Math.min(70,Math.round(H/(avgCellH*ts)))):Math.max(4,Math.round(42/ts));
 wasEl.style.transition='none';toEl.style.transition='none';toEl.style.opacity='';toEl.style.zIndex='6';if(next!==0)costumeEls[next].classList.add('is-active');updateSilhouetteForIdx(next);if(pulseGlowEl)pulseGlowStopPending=true;const svgNS='http://www.w3.org/2000/svg',uid='sm'+Math.random().toString(36).slice(2,9),svg=document.createElementNS(svgNS,'svg');svg.setAttribute('width','0');svg.setAttribute('height','0');svg.style.position='absolute';svg.style.pointerEvents='none';const maskWas=document.createElementNS(svgNS,'mask'),maskTo=document.createElementNS(svgNS,'mask');maskWas.setAttribute('id',uid+'w');maskWas.setAttribute('maskContentUnits','objectBoundingBox');maskTo.setAttribute('id',uid+'t');maskTo.setAttribute('maskContentUnits','objectBoundingBox');svg.appendChild(maskWas);svg.appendChild(maskTo);
 // 2026-09-05: svg를 타일(<rect>) 수천 개를 만들기 "전"에 곧바로 document.body에 붙이면, 이후 반복되는
@@ -1019,6 +1065,7 @@ wasEl.style.transition='none';toEl.style.transition='none';toEl.style.opacity=''
 // 원인이었음 — 프레임이 막혀 남은 타일/조각을 다 처리하는 데 몇 초씩 걸리다 보니 전환이 끝난 것처럼
 // 보인 뒤에도 한참 크럼블이 계속되는 것으로 관찰됐던 것.
 const tw=1/cols,th=1/rows,tiles=[];for(let j=0;j<rows;j++){const yFrac=(j+.5)/rows,wasFill=tileFadeFill(wasFade,yFrac),toFill=tileFadeFill(toFade,yFrac);for(let i=0;i<cols;i++){const xFrac=(i+.5)/cols,rectW=document.createElementNS(svgNS,'rect'),rectT=document.createElementNS(svgNS,'rect');rectW.setAttribute('x',i*tw);rectW.setAttribute('y',j*th);rectW.setAttribute('width',tw+.003);rectW.setAttribute('height',th+.003);rectW.setAttribute('fill',wasFill);maskWas.appendChild(rectW);rectT.setAttribute('x',i*tw);rectT.setAttribute('y',j*th);rectT.setAttribute('width',tw+.003);rectT.setAttribute('height',th+.003);rectT.setAttribute('fill','#000');maskTo.appendChild(rectT);const rate=crumbleRateAt(xFrac,crumbleRF1,crumbleRP1,crumbleRF2,crumbleRP2),tileY=(j+.5)*th*H,triggerY=Math.min(vb.bottom,vb.top+(tileY-vb.top)/rate);tiles.push({triggerY,rectW,rectT,toFill,px:i*tw*W,py:j*th*H,pw:tw*W,ph:th*H})}}tiles.sort((a,b)=>a.triggerY-b.triggerY);
+if(window.__strideDebug)window.__strideDebug.push({totalPieceDemand:cells.length+tiles.length,dur,assembleMode,cap:LIVE_PIECE_CAP});
 // 2026-09-05: "잘리는 그 자리에서 바로 크럼블이 나오게 해달라"는 재요청 — 웨이브 동기화만으로는 부족했음
 // (둘 다 같은 스케줄을 따르긴 해도 여전히 서로 별개인 두 파티클/타일 집합이라 완벽히 같은 지점은 아님).
 // 이제 타일이 실제로 뒤집히는(triggerY 도달) 바로 그 순간·그 타일의 실제 픽셀 사각형(px,py,pw,ph)에서
@@ -1048,14 +1095,37 @@ let t0=null;const windDir=Math.random()<.5?-1:1;
 // 하는 요구사항 자체는 처음부터 인덱스만 앞으로 전진시키는 방식으로도 완전히 동일하게 만족되므로,
 // 애초에 배열을 물리적으로 줄일 필요가 없었음). pendingIdx/pendingTilesIdx라는 진행 커서로 바꿔
 // O(n²)를 O(n)으로 낮춤 — 소비 순서·트리거 판정 로직은 완전히 동일, 배열을 안 건드리고 커서만 전진.
-let pendingIdx=0,pendingTilesIdx=0;function frame(now){if(t0===null)t0=now;const tRaw=Math.min(1,(now-t0)/dur),t=tRaw*(2-tRaw),y=vb.top+t*span;
+// 2026-09-07: pendingIdx를 0이 아니라 cells.length로 시작 — 앰비언트 조각 큐를 "처음부터 이미 다
+// 소진됨"으로 취급해 아래 cellBudget 루프가 절대 실행되지 않게 함(격자 밀도 계산용 cells 배열 자체는
+// 위에서 그대로 유지, 스폰만 0개). 타일 조각(tiles) 쪽은 원래대로 0부터 정상 진행.
+let pendingIdx=cells.length,pendingTilesIdx=0;function frame(now){if(t0===null)t0=now;const tRaw=Math.min(1,(now-t0)/dur),t=tRaw*(2-tRaw),y=vb.top+t*span;
 // 2026-09-05: 저사양 폰에서 frame() 콜백 자체가 뜨문뜨문 호출되면(프레임 드롭), 그 사이 쌓인 트리거
 // 대상 전부가 "따라잡기"로 단 한 프레임에 몰아서 처리됨 — 사용자가 지적한 "루틴이 밀려서 한꺼번에
 // 나온다"의 실제 원인. 프레임 하나가 한 번에 처리할 수 있는 타일/조각 개수에 상한(budget)을 둬서,
 // 밀린 게 아무리 많아도 이번 프레임엔 일부만 보여주고 나머지는 다음 프레임(들)로 자연히 이어지도록
 // 함 — 느린 기기에서는 총 소요 시간이 늘어나는 대신(완료 판정은 이미 pending/active 잔량 기준이라
 // 자동으로 더 길게 이어짐) 매 프레임이 항상 "그때그때" 눈에 보이는 진행으로 나타남.
-let tileBudget=mascotTileBudget;while(tileBudget>0&&pendingTilesIdx<tiles.length&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=mascotCellBudget;while(cellBudget>0&&pendingIdx<cells.length&&(tRaw>=1||cells[pendingIdx].triggerY<=y)){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}if(window.__sandDebugLog)window.__sandDebugLog.push({t:now,pending:cells.length-pendingIdx,tiles:tiles.length-pendingTilesIdx,inFlight:inFlightLandings});if(tRaw<1||pendingIdx<cells.length||pendingTilesIdx<tiles.length||inFlightLandings>0)requestAnimationFrame(frame);else{svg.remove();wasEl.style.maskImage=wasEl.style.webkitMaskImage='';hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.zIndex='';if(pulseGlowEl)pulseGlowEl.style.maskImage=pulseGlowEl.style.webkitMaskImage='';costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);if(pulseGlowEl)pulseGlowStopPending=false;setTimeout(()=>sandLayer.remove(),Math.max(0,sandLayerRemoveAt-performance.now()));requestAnimationFrame(()=>{wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}
+let tileBudget=mascotTileBudget;while(tileBudget>0&&pendingTilesIdx<tiles.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=mascotCellBudget;while(cellBudget>0&&pendingIdx<cells.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||cells[pendingIdx].triggerY<=y)){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}
+if(window.__sandDebugLog)window.__sandDebugLog.push({t:now,pending:cells.length-pendingIdx,tiles:tiles.length-pendingTilesIdx,inFlight:inFlightLandings});if(tRaw<1||pendingIdx<cells.length||pendingTilesIdx<tiles.length||inFlightLandings>0)requestAnimationFrame(frame);else{svg.remove();wasEl.style.maskImage=wasEl.style.webkitMaskImage='';
+hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.zIndex='';if(pulseGlowEl){pulseGlowEl.style.maskImage=pulseGlowEl.style.webkitMaskImage=''}costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);if(pulseGlowEl)pulseGlowStopPending=false;setTimeout(()=>sandLayer.remove(),Math.max(0,sandLayerRemoveAt-performance.now()));requestAnimationFrame(()=>{wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}
+// 2026-09-07: 새 전환 연출 "슬라이스"(모드5) 추가 — "이미지를 슬라이스 내어 왼쪽으로 빠져나가는" 요청.
+// 1차는 세로 밴드(세로로 잘라 가로로 이동)로 만들었으나, 사용자가 "가로로 크럼블 한 개의 높이만큼
+// 잘라서, 하나하나 슬라이스가 옆으로(가로 이동) 빠져나가는 것 — 시간차를 두고"로 정정 — **가로 줄무늬
+// (수평 밴드)로 자르고, 각 밴드가 좌측으로 이동, 밴드 높이는 크럼블(sandSpread) 타일 격자의 실제 평균
+// 타일 높이(avgCellH)와 동일하게** 재계산. avgCellH는 sandSpread의 cols/rows 역산 로직을 그대로
+// 재사용(같은 4~70 클램프)해서 "크럼블 한 개"와 실제로 같은 물리적 크기가 되도록 함. 밴드마다 순서대로
+// (위→아래) 일정 간격(STEP_MS)만큼 시작을 늦춰 "하나하나 시간차를 두고" 빠져나가는 캐스케이드를 만듦.
+// wasEl을 캔버스로 복제하지 않고 원본 파일을 background-image로 참조하는 기존 원칙(sandSpread와 동일)을
+// 그대로 따름. sliceLayer 자체의 정렬은 sandLayer와 완전히 같은 검증된 기법 재사용 — mv의 실측
+// rect(r)를 공통 기준틀로 삼고, was가 코스튬이면 그 코스튬의 실제 --fit-tx/ty/scale을 그대로 복사해
+// 얹어(같은 합성 변환 체인 재현) 어느 코스튬이든 slice가 실제 이미지와 정확히 겹쳐지도록 함(과거
+// 반복된 정렬 오차 트랩을 새 좌표 계산을 만들어 재도입하지 않기 위해, 검증된 패턴만 재사용).
+// document.body에 fixed로 붙여 .hero{overflow:hidden}에도 안 걸리게(화면 밖으로 완전히 빠져나가는
+// 연출이라 필수, sandLayer와 동일 이유). toEl을 즉시 공개(z-index 6)하면 그 아래 wasEl은 자동으로
+// 가려짐(크럼블 모드와 동일 원리, 별도 숨김 처리 불필요) — 그 위(z-index 7)에서 slice들이 좌측으로
+// 빠져나가며 밑에 이미 있는 toEl이 드러나는 것처럼 보임. 세로 하단 페이드(mask-image)와 밝기(opacity)는
+// wasEl의 computed style을 그대로 읽어 sliceLayer 전체에 한 번만 적용(세로 그라데이션이라 모든
+// 밴드에 동일하게 적용하면 됨, 밴드별 재계산 불필요).
 function inkSpread(clickX,clickY){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height,vb=(next!==0&&vboundsFromFrac(costumeVBoundsFrac[next-1],toEl,W,H))||silhouetteVBounds(toEl,W,H)||{top:0,bottom:H},span=Math.max(30,vb.bottom-vb.top),dur=Math.max(422.5,Math.min(1605.5,span/(720/1605.5))),toElRect0=toEl.getBoundingClientRect(),wasElRect0=wasEl.getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1),fire=document.createElement('canvas');fire.className='mascot-veil mascot-fire-ring'+(next!==0?' mascot-fit-transform':'');if(next!==0){const srcEl=costumeEls[next];fire.style.setProperty('--fit-tx',srcEl.style.getPropertyValue('--fit-tx'));fire.style.setProperty('--fit-ty',srcEl.style.getPropertyValue('--fit-ty'));fire.style.setProperty('--fit-scale',srcEl.style.getPropertyValue('--fit-scale'));fire.style.transformOrigin=srcEl.style.transformOrigin}fire.style.zIndex='7';fire.style.filter='blur(3.5px)';fire.width=Math.round(W*dpr);fire.height=Math.round(H*dpr);const fctx=fire.getContext('2d');fctx.scale(dpr,dpr);const fireMaskEl=maskImgElForIdx(next),fmNatW=fireMaskEl.naturalWidth||W,fmNatH=fireMaskEl.naturalHeight||H,fmScale=Math.min(W/fmNatW,H/fmNatH),fmRW=fmNatW*fmScale,fmRH=fmNatH*fmScale,fmOX=(W-fmRW)/2,fmOY=(H-fmRH)/2,fireMaskCanvas=document.createElement('canvas');fireMaskCanvas.width=fire.width;fireMaskCanvas.height=fire.height;const fmctx=fireMaskCanvas.getContext('2d');fmctx.scale(dpr,dpr);fmctx.drawImage(fireMaskEl,fmOX,fmOY,fmRW,fmRH);mv.parentElement.appendChild(fire);toEl.style.zIndex='6';toEl.style.transition='none';toEl.style.opacity=next===0?'.5':'.72';toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.clipPath='inset(0 0 100% 0)';wasEl.style.transition='none';wasEl.style.maskImage=wasEl.style.webkitMaskImage='';wasEl.style.clipPath='inset(0 0 0 0)';if(next!==0)costumeEls[next].classList.add('is-active');updateSilhouetteForIdx(next);if(pulseGlowEl)pulseGlowEl.style.clipPath=toEl.style.clipPath;const t0=performance.now();function frame(now){const tRaw=Math.min(1,(now-t0)/dur),t=tRaw*(2-tRaw),y=vb.top+t*span,revealPct=Math.max(0,Math.min(100,y/H*100));toEl.style.clipPath='inset(0 0 '+(100-revealPct)+'% 0)';if(pulseGlowEl)pulseGlowEl.style.clipPath=toEl.style.clipPath;const screenY=toElRect0.top+(y/H)*toElRect0.height,wasLocalY=(screenY-wasElRect0.top)/wasElRect0.height*H,wasRevealPct=Math.max(0,Math.min(100,wasLocalY/H*100));wasEl.style.clipPath='inset('+wasRevealPct+'% 0 0 0)';drawScanLine(fctx,W,H,y);fctx.globalCompositeOperation='destination-in';fctx.drawImage(fireMaskCanvas,0,0,W,H);fctx.globalCompositeOperation='source-over';if(tRaw<1)requestAnimationFrame(frame);else{fire.remove();wasEl.style.clipPath='inset(100% 0 0 0)';hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.clipPath='';toEl.style.zIndex='';if(pulseGlowEl)pulseGlowEl.style.clipPath='';costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);requestAnimationFrame(()=>{wasEl.style.clipPath='';wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}let hitMoved=false,hitDownX=0,hitDownY=0;
 // 2026-09-04: 클리어스팟 모드 진입 후 손가락으로 드래그해 스팟을 옮기고 손을 떼면, 그 드래그 제스처의
 // 끝에서 브라우저가 합성 click 이벤트를 또 쏴서 아래 토글 로직이 방금 연 모드를 즉시 다시 꺼버리는 바람에
