@@ -1069,6 +1069,10 @@ python tools/validate_site.py
 - 원격: `origin`에 `70b3cfa` 이후 전체(이미 배포된 `896286e`~`82e47d4` + 이 세션기록 문서 커밋 포함) 푸시 완료 + 태그 `버젼5-의상갈아입기소스보안`을 그 마지막 커밋에 생성해 origin에 푸시
 - 이 시점 포함 내용: 조립 각도-크기 선형 매핑, 마스코트 PNG→무손실 WebP, 도넛/마스코트 화면가시성 게이트, **마스코트 의상 갈아입기 전환의 서버 캡슐화(복제방지) 확장**(도넛/네트워크와 동일한 패턴 — `api/spatial/bootstrap`의 `mascotCfg` 필드로 서명된 세션 검증 없이는 전환 기능 자체가 동작 안 함), 그리고 **배포 직후 발견해 긴급 수정한 회귀**(`hero/mascot-worker.js`가 배포 산출물에서 누락돼 운영에서 마스코트 기능이 도입 시점부터 계속 먹통이었던 문제 — `public/hero/`로 이동 + 워커 무응답 타임아웃 추가). 실서버 재검증까지 완료된 상태에서의 백업. 상세는 [[spatial-bootstrap-server-encapsulation]] 6차, [[mascot-costume-ink-transition]], [[mascot-sand-crumble-tile-mask]], [[home-page-load-perf]] 참고.
 
+**2026-09-07, "버젼5 - 모드5 슬라이스 추가" — 로컬 전용 백업(사용자가 "로컬 백업해줘"로 명시)**:
+- 로컬: `backups/vizentive-버젼5-모드5슬라이스추가.zip`(git archive, 134MB)/`.bundle`(전체 refs, 156MB), 로컬 태그 `버젼5-모드5슬라이스추가`(커밋 `0420a22`) — 원격 미푸시, 배포도 하지 않음.
+- 이 시점 포함 내용: 마스코트 전환 모드5 "슬라이스"를 크럼블(`sandSpread`)에 `sliceMode` 매개변수로 흡수한 최종 채택 상태(`cols=1` 고정 + 좌측 슬라이드 물리만 추가, 그 외 SVG 타일 마스크/`LIVE_PIECE_CAP`/무손실 대기열은 크럼블과 100% 동일 코드 재사용). 이후 사용자 요청으로 시도했던 모드6("통짜 슬라이스") 신설과 그에 딸린 9라운드의 추가 수정(mv 방사형 비네트 mask-image 캡처, 공유 clip-path 경계, 도착조각 클론, WAAPI/onLand 이원 시계 통합 등)은 **사용자가 "소통이 안 된다"며 명시적으로 전부 되돌리라고 요청해 전부 삭제** — 모드6 신설(8차) 직전, 모드5만 존재하던 체크포인트로 코드 복원. Playwright로 로컬(`localhost:8010`) 재검증 완료(타일 열 1개, 조각 순수 수평이동, 정상 완료, 콘솔 에러 0건). 상세는 [[mascot-sand-crumble-tile-mask]] 참고.
+
 ## 배포 절차
 
 1. `python tools/validate_site.py`
