@@ -560,7 +560,8 @@ if(forcedMascotMode){const badge=document.createElement('div');badge.textContent
 // 좌표를 계산) 자동 전환 쪽에서 임의 좌표(0,0)로 호출해도 무방.
 let mascotModeSeq=0;
 // 2026-09-07: 모드5 "슬라이스" 추가 — 순환 모듈러스를 4→5로 확장(1→2→3→4→5→1…).
-function nextMascotMode(){return mascotModeSeq=mascotModeSeq%5+1}
+// 2026-09-07: 모드6 "블록 조립" 추가 — 5→6으로 재확장.
+function nextMascotMode(){return mascotModeSeq=mascotModeSeq%6+1}
 // 2026-09-05: "히어로 페이지 소스 최대한 서버로" — 도넛/네트워크(spatialVerified)와 동일한 복제 방지
 // 패턴을 마스코트 전환에도 적용. `mascotVerified`가 true가 되는 유일한 경로는
 // `window.__applyMascotConfig`(spatialApplyPayload가 실제 부트스트랩 성공 시에만 호출) — 아래
@@ -575,12 +576,16 @@ function playMascotTransition(clientX,clientY){
   if(!mascotVerified)return;
   // 2026-09-05: 모드4 "조립"(assemble) 추가 — 크럼블(모드2/3)의 문자 그대로 반대: 새 이미지 조각이
   // 날아들어와 들러붙어 구성됨(sandSpread의 assembleMode 플래그, 자세한 원리는 sandSpread 내부 주석).
-  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:forcedMascotMode==='slice'?5:nextMascotMode();
+  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:forcedMascotMode==='slice'?5:forcedMascotMode==='assembleBlocks'?6:nextMascotMode();
   if(mode===1)inkSpread(clientX,clientY);
   else if(mode===2)sandSpread(clientX,clientY,1);
   else if(mode===3)sandSpread(clientX,clientY,3);
   else if(mode===4)sandSpread(clientX,clientY,1,true);
-  else sandSpread(clientX,clientY,1,false,true);
+  else if(mode===5)sandSpread(clientX,clientY,1,false,true);
+  // 2026-09-07: 모드6 "블록 조립" — 모드4(assembleMode)와 물리·마스크 뒤집기 타이밍 전부 동일, 유일한
+  // 차이는 6번째 인자 blockMode(타일을 균일 격자 대신 blockPartition()의 가변 크기 블록으로 생성 —
+  // 자세한 내용은 sandSpread 내부 타일 구성부 주석 참고).
+  else sandSpread(clientX,clientY,1,true,false,true);
 }
 // 2026-09-05: 클릭(수동) 없이도 마스코트 전환이 저절로 일어나는 "자동 전환" 신설 — 아래 통합 타이머
 // (테두리 깜빡임/헤드라인 반사광/로고 회전과 같은 tick)가 13초 경계를 넘을 때마다 호출. transitionBusy나
@@ -750,6 +755,22 @@ const cells=(cellsFrac||[]).map(c=>{const x=ox+c.xFrac*natW*scale,y=oy+c.yFrac*n
 // 그 .68을 그대로 재현한 회색(255*.68≈173)으로, 페이드 구간도 173→0으로 보간해 원래 밝기를
 // 시종일관 그대로 유지하도록 수정.
 function tileFadeFill(fade,yFrac){if(!fade)return'#fff';const REST=173;if(yFrac<=fade.start)return'rgb('+REST+','+REST+','+REST+')';if(yFrac>=fade.end)return'#000';const g=Math.round(REST*(1-(yFrac-fade.start)/(fade.end-fade.start)));return'rgb('+g+','+g+','+g+')'}
+// 2026-09-07: 모드6 "블록 조립"(blockMode) — 균일한 격자(cols×rows) 대신 재귀적 이진 분할(BSP)로
+// **실제 픽셀 좌표(0~spanX, 0~spanY)** 전체를 채우는 가변 크기 사각형("블록") 조각을 생성 — 반드시
+// 픽셀 공간에서 재귀해야 함(objectBoundingBox 0~1 분율 공간이 아님): mv 박스가 정사각형이 아니면
+// (세로가 긴 인물사진 등) 분율 공간에서의 "정사각형"(w==h)이 실제 화면에선 찌그러져 보이므로, "가로로
+// 길쭉/세로로 길쭉/블록형"이라는 형태 판정 자체가 실제 화면 비율과 맞으려면 분할 전체를 픽셀 단위로
+// 하고 SVG rect 속성(0~1 분율)으로는 맨 마지막에 한 번만 x/spanX, y/spanY로 환산해야 함. 매 분할마다
+// 어느 축을 자를지는 (가로/세로 둘 다 아직 자를 수 있으면) 완전 무작위 50:50이고, 한쪽만 최대
+// 크기(maxW/H)를 넘겼으면 그 축을 강제로 자름(변이 무한정 커지는 것만 방지) — 이 무작위성 덕분에
+// "가로만 계속 잘려 세로로 길쭉해진 덩어리", "세로만 계속 잘려 가로로 길쭉해진 덩어리", "양쪽이 고르게
+// 잘린 블록형 덩어리"가 전부 우연히 섞여 나옴. 최소 크기(minW/H) 미만으로는 더 안 쪼개고, 그 사이
+// 값에서도 35% 확률로 조기 종료시켜 "일찍 멈춘 큰~중간 덩어리"와 "끝까지 잘린 작은 덩어리"도 섞음 —
+// 사용자가 요청한 "블록덩어리·가로로 길쭉·세로로 길쭉·조금 작거나 중간인 덩어리들의 조합"을 별도의
+// 모양 목록 없이 이 하나의 재귀 규칙에서 전부 유도. 반환 형식은 기존 균일 격자 루프가 만들던
+// {x,y,w,h}(단, 분율이 아니라 픽셀 단위)와 호환돼, 아래 sandSpread의 타일 구성부에서 두 방식을 서로
+// 바꿔 끼우기만 하면 되고 그 뒤(타일 트리거·마스크·조각 스폰)는 완전히 동일 코드를 그대로 재사용함.
+function blockPartition(spanX,spanY,minW,minH,maxW,maxH){const out=[];(function rec(x0,y0,x1,y1,depth){const w=x1-x0,h=y1-y0,tooBig=w>maxW||h>maxH,canX=w>minW*2,canY=h>minH*2;if(depth>=14||(!tooBig&&!canX&&!canY)){out.push({x:x0,y:y0,w,h});return}if(!tooBig&&Math.random()<.35&&(canX||canY)){out.push({x:x0,y:y0,w,h});return}let axis;if(w>maxW&&h>maxH)axis=Math.random()<.5?'x':'y';else if(w>maxW)axis='x';else if(h>maxH)axis='y';else axis=(canX&&canY)?(Math.random()<.5?'x':'y'):(canX?'x':'y');if(axis==='x'&&canX){const s=x0+minW+Math.random()*(w-2*minW);rec(x0,y0,s,y1,depth+1);rec(s,y0,x1,y1,depth+1)}else if(axis==='y'&&canY){const s=y0+minH+Math.random()*(h-2*minH);rec(x0,y0,x1,s,depth+1);rec(x0,s,x1,y1,depth+1)}else{out.push({x:x0,y:y0,w,h})}})(0,0,spanX,spanY,0);return out}
 // 2026-09-07: 모드5 "슬라이스" 재설계 — 처음엔 완전히 별도의 함수(sliceSpread)로 새로 짰다가, 자체
 // SVG 마스크/타이밍 시스템을 새로 발명하면서 흰 배경이 비치는 등 문제가 반복 발생 — 사용자가 "다른
 // 모드와 방식은 완전히 같은데 슬라이스로 나가는 것만 다르다"고 명확히 재지적. 실제로 크럼블(이 함수)의
@@ -758,7 +779,7 @@ function tileFadeFill(fade,yFrac){if(!fade)return'#fff';const REST=173;if(yFrac<
 // 방향 대신 순수 좌측 슬라이드로 바꾸면 충분함 — sliceSpread 함수 자체를 삭제하고 5번째 매개변수
 // sliceMode로 이 함수에 흡수. cols를 1로 고정해 타일 하나가 항상 폭 전체를 덮게 만드는 것만 다름
 // (rows는 크럼블과 동일한 avgCellH 역산식 그대로 재사용 — "크럼블 한 개의 높이" 요구사항 자동 충족).
-function sandSpread(clickX,clickY,tileScale,assembleMode,sliceMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
+function sandSpread(clickX,clickY,tileScale,assembleMode,sliceMode,blockMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
 // 2026-09-05: "새 이미지 조각이 날아와 들러붙어 구성되는" 반대 모드(조립) 추가 — 타일 리빌(마스크로
 // was를 지우고 to를 드러내는 로직)은 방향과 무관하게 완전히 동일하게 재사용하고, "날아다니는 조각"의
 // 텍스처 출처(was↔to)와 비행 방향(날아가기↔날아들어와 착지)만 assembleMode로 뒤집음 — 부서지는
@@ -1064,7 +1085,26 @@ wasEl.style.transition='none';toEl.style.transition='none';toEl.style.opacity=''
 // 보이고, 개별 타일 하나의 순간 전환은 크기가 작아 거의 지각되지 않음. 이게 "잔상이 남아 동작"의 진짜
 // 원인이었음 — 프레임이 막혀 남은 타일/조각을 다 처리하는 데 몇 초씩 걸리다 보니 전환이 끝난 것처럼
 // 보인 뒤에도 한참 크럼블이 계속되는 것으로 관찰됐던 것.
-const tw=1/cols,th=1/rows,tiles=[];for(let j=0;j<rows;j++){const yFrac=(j+.5)/rows,wasFill=tileFadeFill(wasFade,yFrac),toFill=tileFadeFill(toFade,yFrac);for(let i=0;i<cols;i++){const xFrac=(i+.5)/cols,rectW=document.createElementNS(svgNS,'rect'),rectT=document.createElementNS(svgNS,'rect');rectW.setAttribute('x',i*tw);rectW.setAttribute('y',j*th);rectW.setAttribute('width',tw+.003);rectW.setAttribute('height',th+.003);rectW.setAttribute('fill',wasFill);maskWas.appendChild(rectW);rectT.setAttribute('x',i*tw);rectT.setAttribute('y',j*th);rectT.setAttribute('width',tw+.003);rectT.setAttribute('height',th+.003);rectT.setAttribute('fill','#000');maskTo.appendChild(rectT);const rate=crumbleRateAt(xFrac,crumbleRF1,crumbleRP1,crumbleRF2,crumbleRP2),tileY=(j+.5)*th*H,triggerY=Math.min(vb.bottom,vb.top+(tileY-vb.top)/rate);tiles.push({triggerY,rectW,rectT,toFill,px:i*tw*W,py:j*th*H,pw:tw*W,ph:th*H})}}tiles.sort((a,b)=>a.triggerY-b.triggerY);
+let tiles;
+if(blockMode){
+// 2026-09-07: 모드6 "블록 조립" — 위 blockPartition()이 만든 가변 크기 {x,y,w,h} 블록마다 균일 격자와
+// 정확히 같은 모양의 tiles 엔트리(triggerY/rectW/rectT/toFill/px,py,pw,ph)를 만듦 — 이후 코드(마스크
+// 부착, tileBudget 루프의 spawnCrumblePiece 호출, LIVE_PIECE_CAP 게이트, 완료 판정)는 균일 격자 때와
+// 100% 동일해서 손댈 필요가 없음. 블록 최소 크기는 이미 실측 알파 셀에서 구해둔 avgCellW/H(다른
+// 모드가 격자 칸 크기를 정할 때 쓰는 것과 같은 기준)를 그대로 재사용해 "크럼블 한 칸"과 같은 눈금에서
+// 출발하고, 최대 크기는 그 6배(또는 박스 폭/높이의 30%, 둘 중 작은 쪽)로 제한 — 사용자가 "조금 작거나
+// 중간"이라고 했지 "아주 크게"는 아니었으므로 지나치게 큰 단일 덩어리는 나오지 않게 상한을 둠.
+// 2026-09-07: minW/minH을 avgCellW/avgCellH 각각 그대로 쓰면(다른 모드처럼) 실측상 이 둘이 서로 꽤
+// 다른 값이라(신체 실루엣 알파 샘플링 특성상 가로/세로 평균 셀 크기가 다름) 한쪽 축이 구조적으로 덜
+// 쪼개져 "블록형/가로/세로"가 골고루 섞이지 않고 한쪽으로(예: 전부 가로로 김) 쏠리는 문제가 실측
+// (Playwright, wide:tall 비율 약 9:1)으로 확인됨 — 두 축의 "한 칸" 크기를 기하평균 하나로 통일해
+// 가로/세로가 똑같이 쪼개지기 쉽게 만들고, 형태 다양성은 오직 blockPartition의 무작위성에서만 나오게 함.
+const baseW=avgCellW>1?avgCellW:W/26,baseH=avgCellH>1?avgCellH:H/42,baseCell=Math.sqrt(baseW*baseH),minW=baseCell*ts,minH=minW,maxW=Math.min(W*.3,minW*6),maxH=Math.min(H*.3,minH*6),blocks=blockPartition(W,H,minW,minH,maxW,maxH);
+tiles=[];for(const b of blocks){const xFrac=(b.x+b.w/2)/W,yFrac=(b.y+b.h/2)/H,wasFill=tileFadeFill(wasFade,yFrac),toFill=tileFadeFill(toFade,yFrac),rectW=document.createElementNS(svgNS,'rect'),rectT=document.createElementNS(svgNS,'rect');rectW.setAttribute('x',b.x/W);rectW.setAttribute('y',b.y/H);rectW.setAttribute('width',b.w/W+.003);rectW.setAttribute('height',b.h/H+.003);rectW.setAttribute('fill',wasFill);maskWas.appendChild(rectW);rectT.setAttribute('x',b.x/W);rectT.setAttribute('y',b.y/H);rectT.setAttribute('width',b.w/W+.003);rectT.setAttribute('height',b.h/H+.003);rectT.setAttribute('fill','#000');maskTo.appendChild(rectT);const rate=crumbleRateAt(xFrac,crumbleRF1,crumbleRP1,crumbleRF2,crumbleRP2),tileY=b.y+b.h/2,triggerY=Math.min(vb.bottom,vb.top+(tileY-vb.top)/rate);tiles.push({triggerY,rectW,rectT,toFill,px:b.x,py:b.y,pw:b.w,ph:b.h})}
+}else{
+const tw=1/cols,th=1/rows;tiles=[];for(let j=0;j<rows;j++){const yFrac=(j+.5)/rows,wasFill=tileFadeFill(wasFade,yFrac),toFill=tileFadeFill(toFade,yFrac);for(let i=0;i<cols;i++){const xFrac=(i+.5)/cols,rectW=document.createElementNS(svgNS,'rect'),rectT=document.createElementNS(svgNS,'rect');rectW.setAttribute('x',i*tw);rectW.setAttribute('y',j*th);rectW.setAttribute('width',tw+.003);rectW.setAttribute('height',th+.003);rectW.setAttribute('fill',wasFill);maskWas.appendChild(rectW);rectT.setAttribute('x',i*tw);rectT.setAttribute('y',j*th);rectT.setAttribute('width',tw+.003);rectT.setAttribute('height',th+.003);rectT.setAttribute('fill','#000');maskTo.appendChild(rectT);const rate=crumbleRateAt(xFrac,crumbleRF1,crumbleRP1,crumbleRF2,crumbleRP2),tileY=(j+.5)*th*H,triggerY=Math.min(vb.bottom,vb.top+(tileY-vb.top)/rate);tiles.push({triggerY,rectW,rectT,toFill,px:i*tw*W,py:j*th*H,pw:tw*W,ph:th*H})}}
+}
+tiles.sort((a,b)=>a.triggerY-b.triggerY);
 if(window.__strideDebug)window.__strideDebug.push({totalPieceDemand:cells.length+tiles.length,dur,assembleMode,cap:LIVE_PIECE_CAP});
 // 2026-09-05: "잘리는 그 자리에서 바로 크럼블이 나오게 해달라"는 재요청 — 웨이브 동기화만으로는 부족했음
 // (둘 다 같은 스케줄을 따르긴 해도 여전히 서로 별개인 두 파티클/타일 집합이라 완벽히 같은 지점은 아님).
