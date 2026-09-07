@@ -203,7 +203,18 @@ if(Array.isArray(data.net))netPool.push(...data.net);if(Array.isArray(data.rec))
     // 포트폴리오 그리드/데이터 월: 핀치로 열 개수가 실제로 바뀌는 순간에만 sizes를 다시 계산해 필요하면 더 큰 파생본을 새로 받는다(핀치 도중 스케일 미리보기 중엔 요청 없음) — measureAndApplyGridSizes 참고.
     const PREVIEW_WIDTHS=[320,640];
     const portfolioPreviewSrcset=art=>art===mascotHeroArt?'':PREVIEW_WIDTHS.map(w=>`${portfolioAssetRoot}/art/art-${String(art).padStart(2,'0')}-${w}.webp ${w}w`).concat(`${portfolioArtSrc(art)} 1600w`).join(', ');
-    const mediaMarkup=(art,title,context='card')=>{const dims=artAspect[art],dimAttr=dims?` width="${dims[0]}" height="${dims[1]}"`:'',isCard=context!=='preview'&&context!=='archive',srcsetAttr=isCard?` srcset="${portfolioCardSrcset(art)}" sizes="${CARD_SIZES}"`:context==='preview'?` srcset="${portfolioPreviewSrcset(art)}"`:'';return portfolioVideos[art]&&context!=='archive'?`<span class="video-frame"><video class="portfolio-video" data-managed-video data-art="${art}" src="${portfolioVideos[art]}"${dimAttr} muted loop playsinline preload="metadata" aria-label="${title} 동영상"></video><span class="video-play" aria-hidden="true"></span></span>`:`<img src="${isCard?portfolioOriginalSrc(art):portfolioArtSrc(art)}"${dimAttr}${srcsetAttr} ${isCard?'':'loading="lazy"'} alt="${title}" draggable="false" decoding="async">`};
+    // 2026-09-07: "도넛 모드에서만 실기기 하얀 깜빡임" 재신고 — 2026-09-04에 이미 8개 이상의 원인 후보를
+    // 하나씩 실기기로 배제했지만(will-change/글로우/캔버스/z-index/box-shadow/체이스글로우/실3D-평면/
+    // RAF스로틀, [[mascot-torus-mobile-flicker-unreproduced]] 참고) 전부 무관으로 나왔던 건. "네트워크는
+    // 괜찮은데 도넛만 그렇다"는 새 단서로 재비교한 결과, 아직 테스트 안 해본 진짜 구조적 차이 발견: 도넛
+    // 카드는 동영상 콘텐츠일 때 실제 <video>(재생 중, data-managed-video)로 렌더링되는데, 네트워크 노드는
+    // renderNetworkDom()에서 항상 <img> 고정 이미지만 씀(video 분기 자체가 없음) — "재생 중인 video +
+    // 매 프레임 3D transform/z-index"는 안드로이드 크롬에서 화면이 하얗게 깜빡이는 것으로 알려진 조합.
+    // 검증용 임시 토글: ?tnv=1이면 도넛 카드(mediaMarkup의 'card' 컨텍스트, 현재 도넛만 이
+    // 컨텍스트로 호출 — 네트워크/포트폴리오 그리드는 각각 별도 렌더 경로/컨텍스트라 영향 없음)만 동영상
+    // 대신 정지 이미지로 강제 — 실기기에서 이 토글만 켜고 끈 상태로 깜빡임 유무를 비교해 가설을 검증.
+    const torusNoVideoTest=new URLSearchParams(location.search).get('tnv')==='1';
+    const mediaMarkup=(art,title,context='card')=>{const dims=artAspect[art],dimAttr=dims?` width="${dims[0]}" height="${dims[1]}"`:'',isCard=context!=='preview'&&context!=='archive',srcsetAttr=isCard?` srcset="${portfolioCardSrcset(art)}" sizes="${CARD_SIZES}"`:context==='preview'?` srcset="${portfolioPreviewSrcset(art)}"`:'';return portfolioVideos[art]&&context!=='archive'&&!(context==='card'&&torusNoVideoTest)?`<span class="video-frame"><video class="portfolio-video" data-managed-video data-art="${art}" src="${portfolioVideos[art]}"${dimAttr} muted loop playsinline preload="metadata" aria-label="${title} 동영상"></video><span class="video-play" aria-hidden="true"></span></span>`:`<img src="${isCard?portfolioOriginalSrc(art):portfolioArtSrc(art)}"${dimAttr}${srcsetAttr} ${isCard?'':'loading="lazy"'} alt="${title}" draggable="false" decoding="async">`};
     function measureAndApplyGridSizes(container,itemSelector){const item=container.querySelector(itemSelector);if(!item)return;const w=Math.round(item.getBoundingClientRect().width);if(!w)return;container.querySelectorAll(`${itemSelector} img[srcset]`).forEach(img=>{img.sizes=`${w}px`})}
     // 도넛/네트워크 카메라 전진(핀치 돌리) 중 카드가 정상 표시 크기보다 훨씬 커질 수 있어, 위와 같은 방식으로 각 카드 이미지의 실제 렌더 크기를 재측정해 sizes를 갱신 — 브라우저가 필요시 더 큰 srcset 파생본(또는 원본)을 새로 받아 계단현상(저해상도 확대)을 줄인다. 핀치가 끝난 시점에만 호출(연속 제스처 중 매 프레임 요청하지 않음).
     const CLARITY_BURST_DELAYS_MS=[150,400,800,1500];
@@ -484,8 +495,66 @@ networkShell.addEventListener('wheel',applyNetworkWheelZoom,{passive:false});win
     let torusFrameRunning=false;
     function spatialStartRender(){if(!spatialVerified)return;const initialTorusCandidates=torusGroups.map((group,index)=>({group,index})).filter(({group})=>!['원페이지 릴스','카드뉴스'].includes(group.label));if(spatialConfig.torusPick!=null&&initialTorusCandidates[spatialConfig.torusPick]){const picked=initialTorusCandidates[spatialConfig.torusPick];currentTorusGroup=picked.index;defaultTorusRotation=-picked.index*Math.PI*2/torusGroups.length;torusRotation=defaultTorusRotation}else if(initialTorusCandidates.length){const fallback=initialTorusCandidates[Math.floor(Math.random()*initialTorusCandidates.length)];currentTorusGroup=fallback.index;defaultTorusRotation=-fallback.index*Math.PI*2/torusGroups.length;torusRotation=defaultTorusRotation}torusItems=torusGroups;spatialModeIndex=spatialConfig.mode;applySpatialMode();syncMobileTorusPosition();renderTorus();spatialIntroEl&&spatialIntroEl.classList.add('spatial-ready')}
     spatialBootstrapReady.then(spatialStartRender);
+    // 2026-09-07: "저사양 폰 GPU 한계로 보이니 좀 더 HW 친화적인 방법을 찾아달라" — 크럼블이 캔버스
+    // 수동 drawImage()에서 DOM+WAAPI(브라우저 네이티브 컴포지터)로 바꿔서 좋아졌던 것과 같은 방향의
+    // 시도. 도넛과 네트워크를 코드로 비교한 결과 진짜 구조적 차이 하나를 발견: 도넛은 카드 위치를
+    // `translate3d(x,y,z) rotateY(0deg)`로 넘겨 **브라우저의 진짜 CSS 3D 원근 엔진**(부모의
+    // `perspective`가 z값을 실제로 원근 투영)에 맡기는데, 네트워크는 `applyNetworkBillboard()`에서
+    // 카메라 투영을 이미 JS로 직접 계산(`project()`)해 그 결과를 얹는 방식 — 네트워크는 원래부터
+    // "가짜 3D를 직접 계산해서 얹는" 방식이었고, 그게 이 기기의 GPU 3D 파이프라인이 못 따라가는
+    // 문제를 원천적으로 피하고 있었을 가능성이 있음. 도넛도 흉내낼 수 있음 — 사실 x/y/scale은 이미
+    // layoutTorus() 안에서 각도·깊이 기반으로 전부 JS가 직접 계산해 놓은 값들이고(edgeCurve, depth
+    // 기반 compositeScale 등), z는 그 위에 브라우저 원근 엔진이 추가로 얹는 "진짜 3D" 몫뿐임 — z를
+    // 빼고 이미 계산해둔 x/y/scale만으로 위치를 잡으면(2D translate만 사용) 네트워크와 동일한 원리로
+    // 카드 자체는 여전히 실제 DOM 엘리먼트+CSS scale/translate 조합(그 자체로 이미 GPU 가속 대상)이고
+    // 시각적 결과(각도별 크기·좌우 곡선)는 그대로 유지하면서 브라우저의 네이티브 3D 원근 계산 비용만
+    // 제거됨 — 검증 전이므로 URL 파라미터 뒤에 숨긴 토글로만 추가(?tf=1), 기본 동작은 전혀 안 바뀜.
+    // 2026-09-07 후속: "가볍긴 한데 위아래로 기울이면 원통형이 나와야 하는데 안 나온다" — 정확한
+    // 지적. 세로 기울임(torusPitch)은 torusScene 전체에 `rotateX(pitch)`를 걸어(torusSceneTransform)
+    // 그 안의 각 카드가 실제로 갖고 있는 z 깊이가 회전하며 "원통 옆면"처럼 보이게 하는 효과인데,
+    // z를 아예 0으로 밀어버리면(flat) 카드들이 전부 한 평면에 있어서 기울여도 평평한 부채꼴이
+    // 통째로 기울어질 뿐 원통 단면이 드러날 깊이 자체가 없어짐 — flat 방식은 "정면에서 좌우로만
+    // 도는" 흔한 경우엔 문제없지만 세로 기울임 중엔 시각적으로 틀림. 그래서 `torusPitch`가 사실상
+    // 0(수평)일 때만 flat을 쓰고, 조금이라도 기울어져 있으면 즉시 원래의 진짜 3D(z 포함)로 되돌아가
+    // 원통 형태를 그대로 보여주도록 조건 추가 — "평소엔 가볍게, 기울일 때만 원래 방식"으로 절충.
+    const torusFlatTest=new URLSearchParams(location.search).get('tf')==='1';
+    // 2026-09-07 후속2: "끄고 켜는 대신, 기울일 때도 z값으로 기존과 같은 효과를 줄 수 없나" 요청으로
+    // 카드별 수동 원근 투영(퍼스펙티브 나눗셈 persp/(persp-z))을 만들고 Playwright로 철저히 검증한
+    // 결과 — 피치(상하 기울임)=0일 때는 네이티브 3D 결과와 소수점 단위까지 정확히 일치하도록 완성했지만
+    // (transform-origin이 박스 정중앙이 아니라 55% 지점이라 scale()이 그 축으로 도는 것까지 실측
+    // 보정해서 잡음 — measureTorus() 참고), 실제로 기울인 상태에서는 근본적인 한계가 있음을 발견:
+    // 카드가 진짜 3D에서 기울어진 평면에 놓이면 원근 투영이 위/아래 변 폭이 다른 사다리꼴로 보이는데
+    // (카메라에서 위쪽 모서리와 아래쪽 모서리까지의 실제 거리가 달라지므로), translate()+scale()만으로는
+    // 사각형만 표현 가능하지 사다리꼴 왜곡 자체는 표현 불가능 — 8° 정도만 기울여도 폭이 카드 크기의
+    // 10% 안팎으로 어긋남을 실측 확인(순수 수학적 한계, 계산 실수가 아님). 그래서 "완전 통합"은
+    // 포기하고 절충: 거의 수평(피치가 아주 작을 때, 실사용자가 호소한 "그냥 돌리기만 해도 깜빡인다"에
+    // 정확히 해당하는 상태)일 때만 이 가벼운 수동 계산을 쓰고, 눈에 띄게 기울이면(threshold 초과)
+    // 즉시 원래의 진짜 네이티브 3D(rotateX)로 돌아가 원통 형태를 정확히 보여줌 — 평소 회전 중엔 항상
+    // 가볍고, 실제로 기울이는 드래그 동작(짧고 일시적) 중에만 무거운 진짜 3D를 씀.
+    // 주의: `.torus-shell{perspective:1100px}`는 CSS 상 기본값일 뿐, measureTorus()가 실측 rz를
+    // 바탕으로 `torusShell.style.perspective = rz*torusDepthPerspectiveRatio` 로 매번 인라인
+    // 재정의한다(화면이 좁아 rz가 330 미만이면 실제 perspective는 1100보다 작아짐) — 그래서 이 값을
+    // 별도 상수로 고정하지 않고, layoutTorus()가 이미 갖고 있는 실측 rz*torusDepthPerspectiveRatio를
+    // 그대로 재사용해야 어긋나지 않는다(Playwright 실측 검증에서 rz≈245 구간 오차로 이 어긋남을 발견).
+    // 2026-09-07 추가 발견: 이 flat 수식은 피치=0에서 네이티브와 "값"은 정확히 같아도 "피치가 변할 때
+    // 얼마나 빨리 움직이는가(기울기)"까지 같다는 보장은 없음 — 실측 결과 flat과 네이티브의 오차가
+    // 피치 각도에 정확히 비례해서 커짐(각도당 카드별로 다르지만 대략 -3px/도 수준, 선형) — 즉 순간
+    // 전환 시 "튀는" 정도가 임계값 각도에 비례함. threshold를 낮출수록 전환 시점의 튐도 비례해서
+    // 작아지므로(threshold=2도일 때 최대 카드 기준 약 6px 튀던 것이 0.3도에서는 1px 미만으로 감소,
+    // 사용자가 실기기에서 "살짝 튄다"고 지적해 실측 후 확정) 거의 드래그 시작 즉시 네이티브로 넘어가게
+    // 낮춰둠 — 이러면 실제 기울임 동작의 거의 전 구간이 진짜 네이티브라 원래 버전과 체감이 같아짐.
+    const torusPitchFlatThreshold=.3;
     const hologram=document.querySelector('#hologram'),holoIndex=document.querySelector('#holoIndex'),holoTitle=document.querySelector('#holoTitle'),holoDescription=document.querySelector('#holoDescription');
-    let initialTorusGroup=0,defaultTorusRotation=0;const torusIdleDelay=1000,torusAutoSpeed=-Math.PI*2/90000,torusWaveAmplitude=36,torusReferenceCardWidth=520,torusDepthPerspectiveRatio=1100/330,torusSpinRadiusBoostMax=1,torusSpinRadiusBoostScale=6.25,torusSpinRadiusBoostFallRate=.05,torusSpinScaleBoostMax=.25,torusSpinScaleBoostFallRate=.05,torusPitchMax=45,torusPitchSensitivity=.28,torusCamMaxZoomRatio=2,torusCamShadowRatio=.22,torusCamBackRatio=1.6,torusCamSensitivity=3,torusWheelZoomRatio=.35;let torusItems=torusGroups,torusMode='groups',currentTorusGroup=initialTorusGroup,currentTorusSubgroup=0,torusRotation=defaultTorusRotation,torusVelocity=0,torusRadiusBoost=0,torusScaleBoost=0,torusPitch=0,torusFront=-1,torusDragging=false,torusLastX=0,torusStartX=0,torusLastY=0,torusStartY=0,torusMoved=false,torusDownIndex=null,torusLastInput=performance.now(),torusFrameTime=performance.now(),torusImagesReady=false,torusRenderToken=0,torusMetrics=null,torusCameraZ=0,torusPinching=false,torusPinchStartDist=0,torusPinchStartCameraZ=0,torusPointers=new Map();
+    let initialTorusGroup=0,defaultTorusRotation=0;const torusIdleDelay=1000,torusAutoSpeed=-Math.PI*2/90000,torusWaveAmplitude=36,torusReferenceCardWidth=520,torusDepthPerspectiveRatio=1100/330,torusSpinRadiusBoostMax=1,torusSpinRadiusBoostScale=6.25,torusSpinRadiusBoostFallRate=.05,torusSpinScaleBoostMax=.25,torusSpinScaleBoostFallRate=.05,torusPitchMax=45,torusPitchSensitivity=.28,
+      // torusPitchDeadzonePx: 수평으로만 돌리려 해도 실제 손가락/마우스 이동은 완벽한 직선이 아니라
+      // 세로로 1~3px 정도 미세하게 흔들리기 마련인데, torusPitchFlatThreshold(0.3도)가 워낙 낮아서
+      // 이 정도 흔들림만으로도 매번 무거운 네이티브 3D 엔진으로 잘못 튀어버림(실측 확인: ±1~3px
+      // 흔들림만으로 pitch가 -1.12도까지 감) — 게다가 pitch는 손을 놓아도 그 값 그대로 남아(자동 복귀
+      // 없음, 사용자 요청으로 유지) 한 번 튀면 계속 무거운 엔진에 머무름. 드래그 시작점(torusStartY)
+      // 기준 누적 세로 이동이 이 값을 넘기 전까지는 세로 움직임을 아예 pitch에 반영하지 않음 —
+      // 프레임별 델타에 불감대를 걸면 "천천히 기울이는 의도적 동작"도 매 프레임이 작아서 영영 안
+      // 쌓이는 문제가 생기므로, 반드시 드래그 시작점 기준 누적 거리로 판정해야 함.
+      torusPitchDeadzonePx=6,torusCamMaxZoomRatio=2,torusCamShadowRatio=.22,torusCamBackRatio=1.6,torusCamSensitivity=3,torusWheelZoomRatio=.35;let torusItems=torusGroups,torusMode='groups',currentTorusGroup=initialTorusGroup,currentTorusSubgroup=0,torusRotation=defaultTorusRotation,torusVelocity=0,torusRadiusBoost=0,torusScaleBoost=0,torusPitch=0,torusPitchArmed=false,torusFront=-1,torusDragging=false,torusLastX=0,torusStartX=0,torusLastY=0,torusStartY=0,torusMoved=false,torusDownIndex=null,torusLastInput=performance.now(),torusFrameTime=performance.now(),torusImagesReady=false,torusRenderToken=0,torusMetrics=null,torusCameraZ=0,torusPinching=false,torusPinchStartDist=0,torusPinchStartCameraZ=0,torusPointers=new Map();
     const makeSubgroupItems=group=>group.subgroups.map(subgroup=>({...subgroup,desc:`${group.title} · PPT 세부 그룹`,tags:['VIZENTIVE',subgroup.label.replaceAll(' ','')]}));
     const makeSubItems=subgroup=>subgroup.arts.map((art,i)=>({art,label:subgroup.label,title:`${subgroup.title} ${String(i+1).padStart(2,'0')}`,desc:'이미지를 선택하면 고해상도 원본 보기로 전환됩니다.',tags:['VIZENTIVE',subgroup.label.replaceAll(' ','')]}));
     const makeGroupItems=group=>group.subgroups.flatMap(subgroup=>makeSubItems({...subgroup,label:group.label}));
@@ -493,8 +562,37 @@ networkShell.addEventListener('wheel',applyNetworkWheelZoom,{passive:false});win
     function randomEntryIndex(items,excludedArts=[]){const excluded=new Set(excludedArts),candidates=items.map((item,index)=>({item,index})).filter(({item})=>!excluded.has(item.art));return candidates.length?candidates[Math.floor(Math.random()*candidates.length)].index:0}
     function renderTorus(){const renderToken=++torusRenderToken;torusImagesReady=false;torusMetrics=null;torusShell.classList.remove('auto-rotating');torusScene.querySelectorAll('video').forEach(video=>video.pause());torusScene.innerHTML='';hologram.classList.toggle('hidden',torusMode!=='groups');torusItems.forEach((item,i)=>{const b=document.createElement('button');b.className=`torus-card${torusMode!=='groups'?' expanding':''}`;b.style.setProperty('--expand-delay',`${Math.min(i*28,280)}ms`);b.style.opacity='1';b.style.filter='none';b.dataset.index=i;b.dataset.label=item.label;const action=torusMode==='groups'?(item.profile?'회사 소개 보기':item.direct?'작품 보기':'하위 그룹 보기'):torusMode==='subgroups'?'작품 보기':'원본 보기';b.setAttribute('aria-label',`${item.title} ${action}`);b.innerHTML=mediaMarkup(item.art,item.title)+dragHintMarkup;torusScene.append(b)});observeManagedVideos(torusScene);torusFront=-1;layoutTorus();const frontMedia=torusScene.querySelector('.torus-card.front img,.torus-card.front video'),startAfterFrontImage=()=>{if(renderToken!==torusRenderToken)return;torusImagesReady=true;torusLastInput=performance.now()-torusIdleDelay;layoutTorus()};if(frontMedia){if(frontMedia.tagName==='IMG')frontMedia.fetchPriority='high';if(frontMedia.readyState>=1||frontMedia.complete)startAfterFrontImage();else{frontMedia.addEventListener(frontMedia.tagName==='VIDEO'?'loadedmetadata':'load',startAfterFrontImage,{once:true});frontMedia.addEventListener('error',startAfterFrontImage,{once:true})}}else startAfterFrontImage();if(torusMode!=='groups')setTimeout(()=>torusScene.querySelectorAll('.expanding').forEach(card=>card.classList.remove('expanding')),1100)}
     function updateHologram(item,index){if(index===torusFront)return;torusFront=index;holoIndex.textContent=`대분류 ${String(index+1).padStart(2,'0')}`;holoTitle.textContent=item.title;holoDescription.textContent=item.desc;hologram.classList.remove('swap');void hologram.offsetWidth;hologram.classList.add('swap')}
-    function measureTorus(cards){const box=torusShell.getBoundingClientRect(),rx=Math.min(box.width*.348,360),rz=Math.min(box.width*.336,330),cardWidth=parseFloat(getComputedStyle(cards[0]).width)||torusReferenceCardWidth,waveAmplitude=torusWaveAmplitude*Math.min(1,cardWidth/torusReferenceCardWidth),perspective=`${rz*torusDepthPerspectiveRatio}px`;if(torusShell.style.perspective!==perspective)torusShell.style.perspective=perspective;return{rx,rz,height:box.height,waveAmplitude}}
-    function layoutTorus(){const cards=[...torusScene.children],n=cards.length;if(!n)return;const {rx,rz,height,waveAmplitude}=torusMetrics||(torusMetrics=measureTorus(cards)),rxB=rx*(1+torusRadiusBoost),points=cards.map((card,i)=>{const a=i/n*Math.PI*2+torusRotation,z=Math.cos(a)*rz;return{card,i,a,z,depth:(z/rz+1)/2}}),front=points.reduce((best,p)=>p.z>best.z?p:best,points[0]).i,stackRanks=new Map([...points].sort((a,b)=>a.z-b.z).map((point,rank)=>[point.i,String(rank+1)]));points.forEach(({card,i,a,z,depth})=>{const sinA=Math.sin(a),wrappedAngle=Math.abs(Math.atan2(sinA,Math.cos(a))),edgeProgress=1-Math.abs(wrappedAngle-Math.PI/2)/(Math.PI/2),edgeCurve=edgeProgress*(2-edgeProgress),x=Math.sign(sinA)*rxB*edgeCurve,baseY=-(1-depth)*Math.min(92,height*.17),waveY=Math.sin(a*2)*waveAmplitude,y=baseY+waveY,size=(.72+Math.pow(depth,8)*.34)/2*.9,emphasis=1+Math.pow(depth,8)*.22,compositeScale=size*emphasis*(1+torusScaleBoost),stackRank=stackRanks.get(i);if(!scatterActiveEls.has(card)){card.style.transform=`translate3d(${x}px,${y}px,${z}px) rotateY(0deg) scale(${compositeScale})`;if(card.style.zIndex!==stackRank)card.style.zIndex=stackRank;card.classList.toggle('front',i===front)}});torusScene.querySelectorAll('[data-managed-video]').forEach(video=>{if(!video.closest('.torus-card')?.classList.contains('front'))videoState(video).manualPaused=false;syncManagedVideo(video)});if(torusMode==='groups')updateHologram(torusItems[front],front);else torusFront=front}
+    function measureTorus(cards){const box=torusShell.getBoundingClientRect(),rx=Math.min(box.width*.348,360),rz=Math.min(box.width*.336,330),cardWidth=parseFloat(getComputedStyle(cards[0]).width)||torusReferenceCardWidth,waveAmplitude=torusWaveAmplitude*Math.min(1,cardWidth/torusReferenceCardWidth),perspective=`${rz*torusDepthPerspectiveRatio}px`;if(torusShell.style.perspective!==perspective)torusShell.style.perspective=perspective;
+      // torusFlatTest 전용 원점 보정: 카드의 정지 위치(top:48%)는 perspective-origin(기본값 = shell
+      // 정중앙 50%/50%)과 정확히 일치하지 않고, 게다가 `.torus-card{transform-origin:50% 55%}`(뒤에
+      // 오는 CSS 규칙이 명시적으로 지정 — 박스 정중앙이 아니라 55% 지점)라서 scale()이 박스 중심이
+      // 아닌 그 지점을 축으로 돌아감 — 카드마다 compositeScale이 달라 이 "축 어긋남" 효과도 카드마다
+      // 달라짐(Playwright 실측으로 발견: 단순 원근 배율만 곱하면 scale이 클수록 최대 십수 px씩
+      // 어긋남). CSS 수치를 손으로 재현하는 대신 DOM에서 직접 실측: 카드를 잠깐 항등변환(스케일1,
+      // 이동0 → 원근·축변형 영향 없는 상태)으로 만들어 실제 화면 중심을 shell 중심과 비교하고,
+      // getComputedStyle().transformOrigin으로 축 자체의 위치도 함께 읽어 보정치를 저장 — margin/
+      // width/aspect-ratio/transform-origin이 나중에 바뀌어도 항상 자동으로 맞는(자체 보정) 방식.
+      let originDx=0,originDy=0;
+      // 하위 그룹 진입 직후(renderTorus→torusMetrics=null) 새 카드에는 `.expanding`의 진입
+      // 애니메이션(torusCardsExpand: 개별 scale 속성을 .08→1로 키프레임 애니메이션)이 걸려 있을 수
+      // 있어, 이 시점에 실측하면 카드가 아직 8% 크기로 쪼그라든 상태를 재게 됨 — 그 왜곡된 실측값이
+      // 보정 상수가 되어 도넛 전체가 한쪽으로 밀려 보이는 버그로 이어짐(발견: 하위 그룹 진입 시
+      // "도넛이 전체적으로 내려간다"). 실측 동안만 애니메이션을 잠깐 꺼서(개별 scale이 CSS 기본값
+      // 1로 복귀) 항상 "정상 크기" 기준으로 재도록 수정.
+      if(torusFlatTest&&cards[0]){const card=cards[0],origTransform=card.style.transform,origAnimation=card.style.animation;card.style.transform='translate(0px,0px) scale(1)';card.style.animation='none';const cardRect=card.getBoundingClientRect(),originPx=getComputedStyle(card).transformOrigin.split(' ').map(parseFloat);card.style.transform=origTransform;card.style.animation=origAnimation;const baseDx=(cardRect.left+cardRect.width/2)-(box.left+box.width/2),baseDy=(cardRect.top+cardRect.height/2)-(box.top+box.height/2),ox=(originPx[0]||0)-cardRect.width/2,oy=(originPx[1]||0)-cardRect.height/2;originDx=baseDx+ox;originDy=baseDy+oy}
+      return{rx,rz,height:box.height,waveAmplitude,originDx,originDy}}
+    function layoutTorus(){const cards=[...torusScene.children],n=cards.length;if(!n)return;const {rx,rz,height,waveAmplitude,originDx,originDy}=torusMetrics||(torusMetrics=measureTorus(cards)),rxB=rx*(1+torusRadiusBoost),points=cards.map((card,i)=>{const a=i/n*Math.PI*2+torusRotation,z=Math.cos(a)*rz;return{card,i,a,z,depth:(z/rz+1)/2}}),front=points.reduce((best,p)=>p.z>best.z?p:best,points[0]).i,stackRanks=new Map([...points].sort((a,b)=>a.z-b.z).map((point,rank)=>[point.i,String(rank+1)]));points.forEach(({card,i,a,z,depth})=>{const sinA=Math.sin(a),wrappedAngle=Math.abs(Math.atan2(sinA,Math.cos(a))),edgeProgress=1-Math.abs(wrappedAngle-Math.PI/2)/(Math.PI/2),edgeCurve=edgeProgress*(2-edgeProgress),x=Math.sign(sinA)*rxB*edgeCurve,baseY=-(1-depth)*Math.min(92,height*.17),waveY=Math.sin(a*2)*waveAmplitude,y=baseY+waveY,size=(.72+Math.pow(depth,8)*.34)/2*.9,emphasis=1+Math.pow(depth,8)*.22,compositeScale=size*emphasis*(1+torusScaleBoost),stackRank=stackRanks.get(i);if(!scatterActiveEls.has(card)){if(torusFlatTest&&Math.abs(torusPitch)<torusPitchFlatThreshold){const perspPx=rz*torusDepthPerspectiveRatio,xr=x+originDx,yr=y+originDy,
+        // 이 분기가 살아있는 동안은 torusPitchDeadzonePx(불감대) 덕에 실제 torusPitch가 항상
+        // torusPitchFlatThreshold(0.3도) 미만으로 사실상 0에 가깝게 묶여 있음 — 예전엔 여기서도 피치
+        // 회전(X축 기준 cosP/sinP)과 transform-origin 축 어긋남(55% 지점) 보정을 같이 계산했지만,
+        // 0.3도 이내 오차는 실측으로 최대 0.9px 수준(선형 비례, Playwright 확인)이라 육안 구분이
+        // 안 되고, 반면 그 계산 자체는 버그가 났던 이력이 있는 코드라 — 오차는 무시할 만하고 코드는
+        // 계속 맞춰야 하는 비용은 실재하므로, 어차피 무의미해진 피치 회전 항을 통째로 들어내고
+        // "피치=0" 전용 식으로 단순화함(z/y를 그대로 씀, cosP=1·sinP=0을 대입한 것과 동일).
+        // K: 이 카드에 실제로 걸어야 할 원근 배율을, 카메라 돌리줌은 이미 씬(scene)의 실제 translateZ로
+        // 브라우저가 다시 한 번 원근 처리하므로 그 중복분을 나눠 상쇄한 비율. torusCameraZ=0(돌리줌
+        // 안 한 평소)이면 K는 그냥 일반 원근 배율과 같아짐.
+        K=(perspPx-torusCameraZ)/(perspPx-z-torusCameraZ);card.style.transform=`translate(${K*xr-originDx}px,${K*yr-originDy}px) scale(${compositeScale*K})`}else card.style.transform=`translate3d(${x}px,${y}px,${z}px) rotateY(0deg) scale(${compositeScale})`;if(card.style.zIndex!==stackRank)card.style.zIndex=stackRank;card.classList.toggle('front',i===front)}});torusScene.querySelectorAll('[data-managed-video]').forEach(video=>{if(!video.closest('.torus-card')?.classList.contains('front'))videoState(video).manualPaused=false;syncManagedVideo(video)});if(torusMode==='groups')updateHologram(torusItems[front],front);else torusFront=front}
     function nearestTurn(index,count,rotation){let a=index/count*Math.PI*2+rotation;return -Math.atan2(Math.sin(a),Math.cos(a))}
     function enterGroup(index){if(torusMode!=='groups'||index!==torusFront)return;const selected=torusGroups[index];if(selected.profile){document.querySelector('#company').scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});return}currentTorusGroup=index;torusScene.children[index]?.classList.add('diving');setTimeout(()=>{torusItems=childTorusItems(selected);torusMode=selected.direct?'items':'subgroups';const parentIndex=torusItems.findIndex(item=>item.art===selected.art),entryIndex=selected.parentFirst&&parentIndex>=0?parentIndex:randomEntryIndex(torusItems,[selected.art]);torusRotation=-entryIndex*Math.PI*2/torusItems.length;torusBack.classList.add('show');renderTorus()},440)}
     function enterSubgroup(index){if(torusMode!=='subgroups'||index!==torusFront)return;currentTorusSubgroup=index;const selected=torusItems[index],parent=torusGroups[currentTorusGroup];torusScene.children[index]?.classList.add('diving');setTimeout(()=>{torusItems=makeSubItems(selected);torusMode='items';const entryIndex=randomEntryIndex(torusItems,[parent.art,selected.art]);torusRotation=-entryIndex*Math.PI*2/torusItems.length;renderTorus()},440)}
@@ -503,13 +601,19 @@ networkShell.addEventListener('wheel',applyNetworkWheelZoom,{passive:false});win
     function selectTorus(index){torusVelocity=0;if(index!==torusFront){tweenTorusRotation(torusRotation+nearestTurn(index,torusItems.length,torusRotation),480);return}if(torusMode==='groups')enterGroup(index);else if(torusMode==='subgroups')enterSubgroup(index);else zoomCardIntoModal(torusScene.children[index],index,torusItems)}
     function noteTorusInput(){torusLastInput=performance.now()}
     let torusDragFrame=0,torusDragDelta=0,torusDragDeltaY=0,torusDragLastT=0;
-    function torusSceneTransform(){return `translateZ(${torusCameraZ}px) rotateX(${torusPitch}deg)`}window.__debugTorusState=function(){return {torusPitch,torusCameraZ,torusRotation,torusVelocity,torusRadiusBoost,torusScaleBoost}};window.__debugSpatialRecipes=function(){return {recipeBufferLen:recipeBuffer.length,netPoolLen:netPool.length,refillInFlight:spatialRefillInFlight}};
+    // flat 모드(torusFlatTest)이고 거의 수평(torusPitchFlatThreshold 이내)일 때는 pitch를
+    // layoutTorus()가 카드별로 이미 직접 반영하므로(위 주석 참고), 여기서 씬 전체에 rotateX까지 또
+    // 걸면 같은 기울임이 두 번 겹쳐 적용됨 — 그 구간만 빼줌. 임계값을 넘어 눈에 띄게 기울면
+    // layoutTorus() 쪽도 진짜 네이티브 3D(translate3d)로 돌아가므로 여기서도 실제 rotateX를 걸어야
+    // 씬과 카드가 같은 기준으로 맞물림. translateZ(카메라 돌리줌)는 씬 전체에 한 번만 걸리는 저비용
+    // 연산이라 항상 그대로 둠.
+    function torusSceneTransform(){return `translateZ(${torusCameraZ}px)${torusFlatTest&&Math.abs(torusPitch)<torusPitchFlatThreshold?'':` rotateX(${torusPitch}deg)`}`}window.__debugTorusState=function(){return {torusPitch,torusCameraZ,torusRotation,torusVelocity,torusRadiusBoost,torusScaleBoost,torusFlatTest,torusMetrics}};window.__debugSpatialRecipes=function(){return {recipeBufferLen:recipeBuffer.length,netPoolLen:netPool.length,refillInFlight:spatialRefillInFlight}};
     function renderTorusDrag(){torusDragFrame=0;const dx=torusDragDelta,dy=torusDragDeltaY,now=performance.now(),dt=Math.max(4,Math.min(50,now-torusDragLastT||16.6667));torusDragLastT=now;torusDragDelta=0;torusDragDeltaY=0;if(dx){torusRotation+=dx*.006;torusVelocity=dx*.0008*(16.6667/dt)}if(dy){torusPitch=Math.max(-torusPitchMax,Math.min(torusPitchMax,torusPitch-dy*torusPitchSensitivity));torusScene.style.transform=torusSceneTransform()}if(!dx&&!dy)return;layoutTorus()}
     function torusCardAtPoint(x,y){let best=null,bestZ=-Infinity;for(const card of torusScene.children){const r=card.getBoundingClientRect();if(x<r.left||x>r.right||y<r.top||y>r.bottom)continue;const z=+card.style.zIndex||0;if(z>bestZ){bestZ=z;best=card}}return best}
     function torusPointerDist(){const pts=[...torusPointers.values()];return pts.length<2?0:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y)}
     function startTorusPinch(){if(window.__hintMarkPinch)window.__hintMarkPinch('torus');torusDragging=false;torusDownIndex=null;torusMoved=true;torusPinching=true;torusVelocity=0;torusPinchStartDist=torusPointerDist();torusPinchStartCameraZ=torusCameraZ;torusShell.classList.remove('snapping','auto-rotating');torusShell.classList.add('dragging')}
-    function startDrag(e){if(e.target.closest('.drag-hint-zoom'))return;if(spatialTransitionActive||spatialModes[spatialModeIndex]!=='torus')return;cancelAnimationFrame(torusTweenFrame);torusTweenFrame=0;noteTorusInput();torusShell.setPointerCapture(e.pointerId);torusPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(torusPointers.size>=2){startTorusPinch();return}torusDragging=true;torusMoved=false;torusDragDelta=0;torusDragDeltaY=0;torusDragLastT=performance.now();torusLastX=torusStartX=e.clientX;torusLastY=torusStartY=e.clientY;torusVelocity=0;const hitCard=e.target.closest('.torus-card')||torusCardAtPoint(e.clientX,e.clientY);torusDownIndex=hitCard?.dataset.index??null;torusShell.classList.remove('snapping','auto-rotating');torusShell.classList.add('dragging')}
-    function dragTorus(e){if(torusPointers.has(e.pointerId))torusPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(torusPinching){noteTorusInput();const dist=torusPointerDist();if(dist>0&&torusPinchStartDist>0){const{rz}=torusMetrics||(torusMetrics=measureTorus([...torusScene.children])),persp=rz*torusDepthPerspectiveRatio,camMin=-persp*torusCamBackRatio,camMax=(persp-rz)*(1-1/torusCamMaxZoomRatio);torusCameraZ=Math.max(camMin,Math.min(camMax,torusPinchStartCameraZ+(dist-torusPinchStartDist)*torusCamSensitivity));torusScene.style.transform=torusSceneTransform();torusShell.classList.toggle('dolly-heavy',torusCameraZ>persp*torusCamShadowRatio)}return}if(!torusDragging)return;const dx=e.clientX-torusLastX,dy=e.clientY-torusLastY;torusLastX=e.clientX;torusLastY=e.clientY;if(Math.abs(e.clientX-torusStartX)>18||Math.abs(e.clientY-torusStartY)>18)torusMoved=true;if(torusDownIndex!==null){torusDragDelta+=dx;torusDragDeltaY+=dy}if(!torusDragFrame)torusDragFrame=requestAnimationFrame(renderTorusDrag)}
+    function startDrag(e){if(e.target.closest('.drag-hint-zoom'))return;if(spatialTransitionActive||spatialModes[spatialModeIndex]!=='torus')return;cancelAnimationFrame(torusTweenFrame);torusTweenFrame=0;noteTorusInput();torusShell.setPointerCapture(e.pointerId);torusPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(torusPointers.size>=2){startTorusPinch();return}torusDragging=true;torusMoved=false;torusDragDelta=0;torusDragDeltaY=0;torusDragLastT=performance.now();torusLastX=torusStartX=e.clientX;torusLastY=torusStartY=e.clientY;torusPitchArmed=false;torusVelocity=0;const hitCard=e.target.closest('.torus-card')||torusCardAtPoint(e.clientX,e.clientY);torusDownIndex=hitCard?.dataset.index??null;torusShell.classList.remove('snapping','auto-rotating');torusShell.classList.add('dragging')}
+    function dragTorus(e){if(torusPointers.has(e.pointerId))torusPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(torusPinching){noteTorusInput();const dist=torusPointerDist();if(dist>0&&torusPinchStartDist>0){const{rz}=torusMetrics||(torusMetrics=measureTorus([...torusScene.children])),persp=rz*torusDepthPerspectiveRatio,camMin=-persp*torusCamBackRatio,camMax=(persp-rz)*(1-1/torusCamMaxZoomRatio);torusCameraZ=Math.max(camMin,Math.min(camMax,torusPinchStartCameraZ+(dist-torusPinchStartDist)*torusCamSensitivity));torusScene.style.transform=torusSceneTransform();torusShell.classList.toggle('dolly-heavy',torusCameraZ>persp*torusCamShadowRatio)}return}if(!torusDragging)return;const dx=e.clientX-torusLastX,dy=e.clientY-torusLastY;torusLastX=e.clientX;torusLastY=e.clientY;if(Math.abs(e.clientX-torusStartX)>18||Math.abs(e.clientY-torusStartY)>18)torusMoved=true;if(!torusPitchArmed&&Math.abs(e.clientY-torusStartY)>=torusPitchDeadzonePx)torusPitchArmed=true;if(torusDownIndex!==null){torusDragDelta+=dx;if(torusPitchArmed)torusDragDeltaY+=dy}if(!torusDragFrame)torusDragFrame=requestAnimationFrame(renderTorusDrag)}
     function endDrag(e){if(e&&e.pointerId!==undefined)torusPointers.delete(e.pointerId);if(torusPinching){if(torusPointers.size<2){torusPinching=false;torusShell.classList.remove('dragging');refreshCardImageSizes(torusScene);const remaining=[...torusPointers.values()][0];if(remaining){torusDragging=true;torusMoved=true;torusDownIndex=null;torusLastX=torusStartX=remaining.x;torusLastY=torusStartY=remaining.y;torusShell.classList.add('dragging')}}return}noteTorusInput();if(torusDragFrame){cancelAnimationFrame(torusDragFrame);renderTorusDrag()}const selected=torusDownIndex;torusDragging=false;torusDownIndex=null;torusShell.classList.remove('dragging');if(!torusMoved&&selected!==null)selectTorus(+selected)}
     torusShell.addEventListener('pointerdown',startDrag);torusShell.addEventListener('pointermove',dragTorus);torusShell.addEventListener('pointerup',endDrag);torusShell.addEventListener('pointercancel',endDrag);
     let torusWheelZoomTimer=0;
@@ -542,16 +646,16 @@ torusShell.addEventListener('wheel',applyTorusWheelZoom,{passive:false});window.
     sizeField();addEventListener('resize',sizeField,{passive:true});if(!reduced)drawField();else drawField(),cancelAnimationFrame(raf);
     const hueMap={portfolio:245,archive:315,strengths:155,contact:275};
     const themeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting&&hueMap[entry.target.id])fieldHue=hueMap[entry.target.id]}),{threshold:.35});Object.keys(hueMap).forEach(id=>{const el=document.getElementById(id);if(el)themeObserver.observe(el)});
-    const observer=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');observer.unobserve(e.target)}}),{threshold:.08});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));(function(){const mv=document.querySelector('.mascot-veil');if(!mv)return;const hit=document.querySelector('.mascot-hit');const hitBody=document.querySelector('.mascot-hit-body');const costumeEls0=[...document.querySelectorAll('.mascot-costume')];const isTouch=matchMedia('(hover:none),(pointer:coarse)').matches;const forcedMascotMode=new URLSearchParams(location.search).get('mascotMode');
+    const observer=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');observer.unobserve(e.target)}}),{threshold:.08});document.querySelectorAll('.reveal').forEach(x=>observer.observe(x));(function(){const mv=document.querySelector('.mascot-veil');if(!mv)return;const hit=document.querySelector('.mascot-hit');const hitBody=document.querySelector('.mascot-hit-body');const costumeEls0=[...document.querySelectorAll('.mascot-costume')];const isTouch=matchMedia('(hover:none),(pointer:coarse)').matches;const forcedMascotMode=new URLSearchParams(location.search).get('mm');
 // 2026-09-04: "몸통센서 클릭해도 모드가 안 바뀐다(30번 다 같은 모드)"는 보고 — 코드 로직 자체는
 // 강제 안 한 상태로 반복 클릭 테스트해보면 스캔라인/타일 다양하게 잘 섞여 나옴(랜덤 로직 정상).
-// 유력한 원인은 ?mascotMode=sand 같은 테스트용 URL 파라미터가 브라우저에 남아있어 매번 그
+// 유력한 원인은 ?mm=sand 같은 테스트용 URL 파라미터가 브라우저에 남아있어 매번 그
 // 모드로 강제 고정되고 있는 것 — 눈으로 바로 확인 가능하도록, 파라미터가 걸려 있을 때만 보이는
 // 작은 배지를 띄움(평소엔 안 보임, 정상 상태에서 아무 영향 없음).
 if(forcedMascotMode){const badge=document.createElement('div');badge.textContent='모드 고정됨: '+forcedMascotMode+' (주소창 확인)';badge.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;background:#e11d48;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;font-family:sans-serif;pointer-events:none';document.body.appendChild(badge)}
 // 2026-09-04: 전환 연출 3종을 하나로 정리 — 모드1=처음의 가로 스캔라인(inkSpread, 변경 없음),
 // 모드2=지금 상태의 크럼블(sandSpread, 타일 크기 그대로), 모드3=모드2와 같지만 타일 크기만 3배
-// (sandSpread에 tileScale=3 전달). 클릭마다 셋 중 하나를 균등 확률로 무작위 선택. ?mascotMode=
+// (sandSpread에 tileScale=3 전달). 클릭마다 셋 중 하나를 균등 확률로 무작위 선택. ?mm=
 // scan|sand|sand3 으로 테스트용 강제 지정 가능(URL 파라미터).
 // 2026-09-05: "무작위 말고 모드1→2→3→4 순서대로, 자동 전환이든 수동(클릭) 전환이든 똑같이"로 변경 —
 // mascotModeSeq 하나를 두 트리거(수동 클릭이 부르는 playMascotTransition, 아래 통합 타이머가 부르는
@@ -561,7 +665,8 @@ if(forcedMascotMode){const badge=document.createElement('div');badge.textContent
 let mascotModeSeq=0;
 // 2026-09-07: 모드5 "슬라이스" 추가 — 순환 모듈러스를 4→5로 확장(1→2→3→4→5→1…).
 // 2026-09-07: 모드6 "블록 조립" 추가 — 5→6으로 재확장.
-function nextMascotMode(){return mascotModeSeq=mascotModeSeq%6+1}
+// 2026-09-07: 모드7 "트랜스포머" 추가 — 6→7으로 재확장.
+function nextMascotMode(){return mascotModeSeq=mascotModeSeq%7+1}
 // 2026-09-05: "히어로 페이지 소스 최대한 서버로" — 도넛/네트워크(spatialVerified)와 동일한 복제 방지
 // 패턴을 마스코트 전환에도 적용. `mascotVerified`가 true가 되는 유일한 경로는
 // `window.__applyMascotConfig`(spatialApplyPayload가 실제 부트스트랩 성공 시에만 호출) — 아래
@@ -576,7 +681,7 @@ function playMascotTransition(clientX,clientY){
   if(!mascotVerified)return;
   // 2026-09-05: 모드4 "조립"(assemble) 추가 — 크럼블(모드2/3)의 문자 그대로 반대: 새 이미지 조각이
   // 날아들어와 들러붙어 구성됨(sandSpread의 assembleMode 플래그, 자세한 원리는 sandSpread 내부 주석).
-  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:forcedMascotMode==='slice'?5:forcedMascotMode==='assembleBlocks'?6:nextMascotMode();
+  const mode=forcedMascotMode==='scan'?1:forcedMascotMode==='sand'?2:forcedMascotMode==='sand3'?3:forcedMascotMode==='assemble'?4:forcedMascotMode==='slice'?5:forcedMascotMode==='assembleBlocks'?6:forcedMascotMode==='transformer'?7:nextMascotMode();
   if(mode===1)inkSpread(clientX,clientY);
   else if(mode===2)sandSpread(clientX,clientY,1);
   else if(mode===3)sandSpread(clientX,clientY,3);
@@ -585,7 +690,11 @@ function playMascotTransition(clientX,clientY){
   // 2026-09-07: 모드6 "블록 조립" — 모드4(assembleMode)와 물리·마스크 뒤집기 타이밍 전부 동일, 유일한
   // 차이는 6번째 인자 blockMode(타일을 균일 격자 대신 blockPartition()의 가변 크기 블록으로 생성 —
   // 자세한 내용은 sandSpread 내부 타일 구성부 주석 참고).
-  else sandSpread(clientX,clientY,1,true,false,true);
+  else if(mode===6)sandSpread(clientX,clientY,1,true,false,true);
+  // 2026-09-07: 모드7 "트랜스포머" — 모드4와 타일(균일 격자)·마스크 뒤집기 타이밍은 전부 동일, 유일한
+  // 차이는 7번째 인자 transformerMode(조각이 자기 자리가 아니라 아무 데나 먼저 "착지"한 뒤 표면 위를
+  // 미끄러지거나 굴러서 진짜 자리로 이동 — 자세한 내용은 spawnCrumblePiece 내부 주석 참고).
+  else sandSpread(clientX,clientY,1,true,false,false,true);
 }
 // 2026-09-05: 클릭(수동) 없이도 마스코트 전환이 저절로 일어나는 "자동 전환" 신설 — 아래 통합 타이머
 // (테두리 깜빡임/헤드라인 반사광/로고 회전과 같은 tick)가 13초 경계를 넘을 때마다 호출. transitionBusy나
@@ -779,7 +888,7 @@ function blockPartition(spanX,spanY,minW,minH,maxW,maxH){const out=[];(function 
 // 방향 대신 순수 좌측 슬라이드로 바꾸면 충분함 — sliceSpread 함수 자체를 삭제하고 5번째 매개변수
 // sliceMode로 이 함수에 흡수. cols를 1로 고정해 타일 하나가 항상 폭 전체를 덮게 만드는 것만 다름
 // (rows는 크럼블과 동일한 avgCellH 역산식 그대로 재사용 — "크럼블 한 개의 높이" 요구사항 자동 충족).
-function sandSpread(clickX,clickY,tileScale,assembleMode,sliceMode,blockMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
+function sandSpread(clickX,clickY,tileScale,assembleMode,sliceMode,blockMode,transformerMode){if(transitionBusy||!mvCutout)return;if(clearSpotActive)setClearSpotActive(false);const next=(costumeIdx+1)%costumeEls.length,was=costumeIdx;const toEl=displayElFor(next),wasEl=was===0?mv:costumeEls[was];if(!toEl)return;transitionBusy=true;const r=mv.getBoundingClientRect(),W=r.width,H=r.height;const wasSourceEl=maskImgElForIdx(was),wasCellsFrac=was===0?mvSandCells:costumeSandCells[was-1],wasVBoundsFrac=was===0?mvVBoundsFrac:costumeVBoundsFrac[was-1];
 // 2026-09-05: "새 이미지 조각이 날아와 들러붙어 구성되는" 반대 모드(조립) 추가 — 타일 리빌(마스크로
 // was를 지우고 to를 드러내는 로직)은 방향과 무관하게 완전히 동일하게 재사용하고, "날아다니는 조각"의
 // 텍스처 출처(was↔to)와 비행 방향(날아가기↔날아들어와 착지)만 assembleMode로 뒤집음 — 부서지는
@@ -1017,7 +1126,31 @@ let dx,dy,rotDeg,maxAge,kf;if(assembleMode){maxAge=420+Math.random()*480;
 // "가운데 뭉텅이+바깥 급격한 테두리"의 좌우대칭 각짐이 완만한 그라데이션으로 풀림.
 const lx=px-bodyCenterX,R=bodyR,theta=Math.asin(Math.max(-1,Math.min(1,lx/R))),depthFactor=1-Math.abs(theta)/(Math.PI/2),startScale=1+depthFactor*mascotScaleMax,distRand=Math.random(),farDist=(lx<0?-1:1)*distRand*W*mascotDistMaxRatio;
 if(window.__pieceDebug)window.__pieceDebug.push({px,py,W,R,lx,thetaDeg:Math.asin(Math.max(-1,Math.min(1,lx/R)))*180/Math.PI,depthFactor,startScale,farDist});
-dx=farDist;dy=0;rotDeg=0;kf=[{transform:'translate('+dx+'px,0px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,0px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}
+dx=farDist;dy=0;rotDeg=0;
+// 2026-09-07: 모드7 8차 — "시작 지점은 실루엣 안이 아니라 바깥이어야 한다, 처음(모드4)처럼" — 7차가
+// "대각선으로 착지하지 말라"는 지적을 "아예 날아오지 말고 제자리(실루엣 안)에서 바로 나타나라"로
+// 잘못 해석했음(과도한 수정) — 실제로는 "날아오는 것 자체는 처음(모드4)처럼 화면 밖에서 시작해야
+// 하고, 그 날아오는 경로만 대각선이 아니라 평행(직선 한 축)이면 된다"는 뜻이었음. 다시 phase A를
+// 살리되, 이번엔 대각선이 안 나오도록 설계: 시작점의 세로 좌표(dy)를 0이 아니라 **착지 지점의 세로
+// 좌표(landWy)로 고정**해서 시작부터 착지까지 세로 이동이 전혀 없는(가로만 움직이는) 순수 수평
+// 비행이 되도록 함 — 모드4의 3키프레임 구조(오프셋 Tb에서 스케일/불투명도 먼저 도착, 위치는 오프셋
+// T1까지 쭉 등속)를 그대로 재사용하되 종착지만 (0,0) 대신 (landWx,landWy)로 바꿈. 이후(오프셋
+// T1~1)는 7차에서 만든 BFS 직각 경로 그대로 이어붙임 — 날아오는 구간도, 표면 위 이동 구간도 전부
+// 대각선 없이 축정렬만 남음.
+if(transformerMode){const homeI=Math.round(px/pw),homeJ=Math.round(py/ph),
+landing=transformerHomeReachable(homeI,homeJ)?transformerPickLanding(homeI,homeJ):null,
+rawPath=landing?transformerBfs(landing[0],landing[1],homeI,homeJ):null;
+if(window.__transformerDebug)window.__transformerDebug.push({homeI,homeJ,landing,rawPathLen:rawPath?rawPath.length:-1,occListLen:transformerOccList?transformerOccList.length:-1,cols:transformerCols,rows:transformerRows,homeOccupied:transformerGrid?transformerGrid[homeJ*transformerCols+homeI]:-1});
+if(rawPath&&rawPath.length){const waypoints=transformerConsolidate(rawPath),
+roll=Math.random()<.5,totalRot=roll?360*(1+Math.floor(Math.random()*2)):0,nLegs=Math.max(1,waypoints.length-1),sineEase='cubic-bezier(.37,0,.63,1)',
+landWx=waypoints[0][0]*pw-px,landWy=waypoints[0][1]*ph-py,
+phaseADur=400+Math.random()*300,phaseBDur=700+Math.random()*400,T1=phaseADur/(phaseADur+phaseBDur),Tb=T1*.15;
+maxAge=phaseADur+phaseBDur;
+const kfArr=[{transform:'translate('+dx+'px,'+landWy+'px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx+(landWx-dx)*.15)+'px,'+landWy+'px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:Tb},{transform:'translate('+landWx+'px,'+landWy+'px) scale(1) rotate(0deg)',opacity:alpha,offset:waypoints.length>1?T1:1}];
+for(let k=1;k<waypoints.length;k++){const isLast=k===waypoints.length-1,wx2=isLast?0:waypoints[k][0]*pw-px,wy2=isLast?0:waypoints[k][1]*ph-py,t=isLast?1:T1+(1-T1)*(k/nLegs),rot=totalRot*(k/nLegs);kfArr[kfArr.length-1].easing=sineEase;kfArr.push({transform:'translate('+wx2+'px,'+wy2+'px) scale(1) rotate('+rot+'deg)',opacity:alpha,offset:t})}
+kf=kfArr
+}else kf=[{transform:'translate('+dx+'px,'+dy+'px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,'+(dy*.85)+'px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}
+else kf=[{transform:'translate('+dx+'px,0px) scale('+startScale+')',opacity:0,offset:0},{transform:'translate('+(dx*.85)+'px,0px) scale('+(1+(startScale-1)*.85)+')',opacity:alpha,offset:.15},{transform:'translate(0px,0px) scale(1)',opacity:alpha,offset:1}]}
 // 2026-09-07: sliceMode(모드5) — 크럼블(else 기본 분기)의 무작위 방향 물리 대신, 조각이 폭 전체를
 // 덮는 가로 밴드이므로 순수 좌측 이동만 함(세로 이동·회전 없음, 요청하신 "옆으로 빠져나가는" 그대로).
 // 불투명도(alpha)는 크럼블처럼 끝에서 0으로 페이드하지 않고 시종일관 유지 — "부서져 흩어짐"이 아니라
@@ -1105,6 +1238,54 @@ tiles=[];for(const b of blocks){const xFrac=(b.x+b.w/2)/W,yFrac=(b.y+b.h/2)/H,wa
 const tw=1/cols,th=1/rows;tiles=[];for(let j=0;j<rows;j++){const yFrac=(j+.5)/rows,wasFill=tileFadeFill(wasFade,yFrac),toFill=tileFadeFill(toFade,yFrac);for(let i=0;i<cols;i++){const xFrac=(i+.5)/cols,rectW=document.createElementNS(svgNS,'rect'),rectT=document.createElementNS(svgNS,'rect');rectW.setAttribute('x',i*tw);rectW.setAttribute('y',j*th);rectW.setAttribute('width',tw+.003);rectW.setAttribute('height',th+.003);rectW.setAttribute('fill',wasFill);maskWas.appendChild(rectW);rectT.setAttribute('x',i*tw);rectT.setAttribute('y',j*th);rectT.setAttribute('width',tw+.003);rectT.setAttribute('height',th+.003);rectT.setAttribute('fill','#000');maskTo.appendChild(rectT);const rate=crumbleRateAt(xFrac,crumbleRF1,crumbleRP1,crumbleRF2,crumbleRP2),tileY=(j+.5)*th*H,triggerY=Math.min(vb.bottom,vb.top+(tileY-vb.top)/rate);tiles.push({triggerY,rectW,rectT,toFill,px:i*tw*W,py:j*th*H,pw:tw*W,ph:th*H})}}
 }
 tiles.sort((a,b)=>a.triggerY-b.triggerY);
+// 2026-09-07: 모드7 "트랜스포머" 5차 — "착지 후 움직일 때도 실루엣 내부에서만 움직여야 한다" 재지적.
+// 4차까지는 착지 지점만 실루엣 안(실측 알파 샘플)이었지, 착지 지점→자기 자리까지 잇는 경로(ㄱ자
+// 2다리 직선)는 여전히 두 점을 그냥 잇는 직선이라 그 사이(허공/여백)를 가로지를 수 있었음 — 몸이
+// 볼록(convex)하지 않은 이상(목/겨드랑이 등 잘록한 부분) 두 실루엣 점을 잇는 직선이 항상 실루엣
+// 안에 머무른다는 보장이 없음. 진짜 해법: 균일 격자(cols×rows, transformerMode는 항상 이 격자만
+// 씀 — blockMode/sliceMode와는 동시에 쓰이지 않음)를 "실루엣 점유 격자"로 바꿔(그 칸 안에 실측
+// nextCellsFrac 샘플이 하나라도 있으면 점유), 착지 칸→자기 칸까지 **점유된 칸만 지나가는 BFS
+// 경로**를 실제로 찾음(상하좌우 4방향, 격자이므로 항상 직각 이동) — 다이렉트 직선이 아니라 몸의
+// 굴곡을 따라 꺾어가는 실제 경로이므로 도중에 허공을 지날 수가 없음. 연속된 같은 방향 칸은 하나의
+// 다리(leg)로 묶어(방향이 바뀌는 지점만 키프레임으로) 다리 수를 줄임 — 다리마다 균등 시간 배분,
+// 회전(구르기)도 다리 수에 걸쳐 누적 360°의 배수로 나눠 건다.
+// 2026-09-07: 성능 튜닝 — 모드7 전용 헬퍼 3개를 손봄(전부 트랜지션 하나당 최대 수백~1000여 회 호출됨,
+// 저사양 폰 부담 우려로 [[home-page-load-perf]]와 같은 원칙 적용). (1) BFS가 호출마다 매번 새
+// Uint8Array/Int32Array를 만들고 -1로 채우던 것을 트랜지션당 1회만 만든 버퍼 재사용 + "세대 번호"
+// 트릭(매 호출마다 currentGen을 1씩 늘리고 그 세대 번호가 적혀있는지로 방문 여부 판정)으로 교체 —
+// 매 호출마다 배열 새로 만들고 초기화하는 비용 자체를 제거. (2) 더 중요한 발견: 자기 자리가 실루엣
+// 밖(배경 여백 타일, 실측상 전체의 약 60%)인 조각은 BFS가 "실패"를 확정하기 전에 도달 가능한
+// 점유 칸을 전부 훑어야 해서(그래프 전체 탐색) 정작 이 실패 케이스가 가장 비쌈 — 그런데 BFS가
+// 목적지에 들어가는 마지막 한 걸음은 "이웃 중 점유된 칸에서만" 가능하므로, **자기 자신과 상하좌우
+// 이웃 5칸 중 점유된 칸이 하나도 없으면 그 시점에 이미 도달 불가능이 수학적으로 확정**됨(근사 아님,
+// BFS의 마지막-걸음 규칙에서 직접 유도됨) — transformerHomeReachable()로 이 5칸만 먼저 확인해
+// 그런 경우 BFS 호출 자체를 생략(바로 폴백) — 매번 그래프 전체를 훑던 최악의 경우(=가장 흔한 경우)
+// 자체를 없앰. (3) transformerPickLanding()의 Array.filter()(호출마다 새 배열 할당)를 저수지
+// 샘플링(reservoir sampling, 한 번 훑으면서 배열 할당 없이 무작위 하나만 유지)으로 교체.
+let transformerGrid=null,transformerCols=0,transformerRows=0,transformerOccList=null,transformerVisited=null,transformerPrev=null,transformerGen=0;
+if(transformerMode){transformerCols=cols;transformerRows=rows;const occ=new Uint8Array(cols*rows),occList=[];
+if(nextCellsFrac&&nextCellsFrac.length){for(const c of nextCellsFrac){const realX=cOX+c.xFrac*natW0*cScale,realY=cOY+c.yFrac*natH0*cScale,ci=Math.min(cols-1,Math.max(0,Math.floor(realX/W*cols))),cj=Math.min(rows-1,Math.max(0,Math.floor(realY/H*rows))),k=cj*cols+ci;if(!occ[k]){occ[k]=1;occList.push([ci,cj])}}}
+transformerGrid=occ;transformerOccList=occList;transformerVisited=new Int32Array(cols*rows);transformerPrev=new Int32Array(cols*rows)
+if(window.__transformerGridDump){let s='';for(let j=0;j<rows;j++){let row='';for(let i=0;i<cols;i++)row+=occ[j*cols+i]?'#':'.';s+=row+'\n'}window.__transformerGridDump.push(s)}}
+function transformerHomeReachable(homeI,homeJ){const grid=transformerGrid,cols2=transformerCols,rows2=transformerRows;if(!grid)return false;if(grid[homeJ*cols2+homeI])return true;const nbrs=[[homeI+1,homeJ],[homeI-1,homeJ],[homeI,homeJ+1],[homeI,homeJ-1]];for(const[ni,nj]of nbrs){if(ni>=0&&nj>=0&&ni<cols2&&nj<rows2&&grid[nj*cols2+ni])return true}return false}
+function transformerBfs(startI,startJ,endI,endJ){const cols2=transformerCols,rows2=transformerRows,grid=transformerGrid,startK=startJ*cols2+startI,endK=endJ*cols2+endI;if(startK===endK)return[[startI,startJ]];transformerGen++;const gen=transformerGen,visited=transformerVisited,prev=transformerPrev;visited[startK]=gen;const queue=[startK];let qi=0,found=false;while(qi<queue.length){const cur=queue[qi++];if(cur===endK){found=true;break}const ci=cur%cols2,cj=(cur-ci)/cols2;const nbrs=[[ci+1,cj],[ci-1,cj],[ci,cj+1],[ci,cj-1]];for(const[ni,nj]of nbrs){if(ni<0||nj<0||ni>=cols2||nj>=rows2)continue;const nk=nj*cols2+ni;if(visited[nk]===gen)continue;if(!grid[nk]&&nk!==endK)continue;visited[nk]=gen;prev[nk]=cur;queue.push(nk)}}
+if(!found)return null;const path=[];let cur=endK;while(true){const ci=cur%cols2,cj=(cur-ci)/cols2;path.push([ci,cj]);if(cur===startK)break;cur=prev[cur]}path.reverse();return path}
+function transformerConsolidate(path){if(path.length<2)return[path[0]];const waypoints=[path[0]];let dir=null;for(let k=1;k<path.length;k++){const d=(path[k][0]-path[k-1][0])+','+(path[k][1]-path[k-1][1]);if(dir===null){dir=d;continue}if(d!==dir){waypoints.push(path[k-1]);dir=d}}waypoints.push(path[path.length-1]);return waypoints}
+// 2026-09-07: 모드7 6차 — "초기 착지를 너무 엉뚱한 곳(=목적지와 먼 아무 데)이 아니라 목적지 근방으로,
+// 그리고 상하보다 좌우 이동이 많게" — 지금까지는 nextCellsFrac/transformerOccList 전체에서 완전
+// 무작위로 착지 칸을 뽑아서, 자기 자리와 거리가 먼 경우(예: 얼굴이 자기 자리인데 어깨에 착지) 슬라이딩
+// 거리가 길어져 "어지럽다"는 인상을 줬음. 자기 칸(homeI,homeJ) 주변의 좁은 사각 창(가로 반경 rx가
+// 세로 반경 ry보다 훨씬 큼 — 창 자체가 가로로 넓적한 모양) 안의 점유 칸만 후보로 걸러 그중 무작위로
+// 뽑음 — 거리 제한(근방)과 가로 우선(좌우 이동 위주) 두 요구를 창 모양 하나로 동시에 만족. 후보가
+// 없으면(예: 좁은 목 부위처럼 주변이 성긴 경우) 창을 2배씩 키워가며 재시도, 그래도 없으면 전체
+// 목록으로 폴백(항상 착지는 가능하도록 보장).
+// 2026-09-07: 9차 — "상하 이동이 여전히 너무 적다" 재재신고 — 7차에서 이미 한 번 완화(cols*.4/
+// rows*.05→rows*.08)했지만 부족했음. 1차 시도로 rows*.16까지 키웠더니 실측 비율이 0.83:1(세로가
+// 오히려 가로보다 커짐)로 과도하게 넘어가 rows*.11/cols*.35로 재조정 — 실측 가로:세로 비율 1.11:1
+// (거의 균등, 가로가 근소하게만 우세)로 확정. 창 반경 하나 바꿀 때마다 반드시 디버그 훅으로 실제
+// 비율을 재측정할 것 — 비율은 창 치수에 선형으로 비례하지 않고(실제 실루엣 밀도 분포에 좌우됨)
+// 감으로 짐작하면 쉽게 과도/과소 교정됨(이번에도 한 번에 못 맞추고 재조정 필요했음).
+function transformerPickLanding(homeI,homeJ){const list=transformerOccList;if(!list||!list.length)return null;let rx=Math.max(3,Math.round(transformerCols*.25)),ry=Math.max(2,Math.round(transformerRows*.28));for(let attempt=0;attempt<4;attempt++){let picked=null,seen=0;for(let i=0;i<list.length;i++){const c=list[i];if(Math.abs(c[0]-homeI)>rx||Math.abs(c[1]-homeJ)>ry)continue;seen++;if(Math.random()<1/seen)picked=c}if(picked)return picked;rx*=2;ry*=2}return list[Math.floor(Math.random()*list.length)]}
 if(window.__strideDebug)window.__strideDebug.push({totalPieceDemand:cells.length+tiles.length,dur,assembleMode,cap:LIVE_PIECE_CAP});
 // 2026-09-05: "잘리는 그 자리에서 바로 크럼블이 나오게 해달라"는 재요청 — 웨이브 동기화만으로는 부족했음
 // (둘 다 같은 스케줄을 따르긴 해도 여전히 서로 별개인 두 파티클/타일 집합이라 완벽히 같은 지점은 아님).
