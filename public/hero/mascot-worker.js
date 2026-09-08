@@ -10,8 +10,15 @@ function readAlphaFromBitmap(bitmap) {
   const c = new OffscreenCanvas(w, h);
   const ctx = c.getContext('2d');
   ctx.drawImage(bitmap, 0, 0);
-  let data;
-  try { data = ctx.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+  let rgba;
+  try { rgba = ctx.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+  // 2026-09-08: 실측 결과 이 데이터를 읽는 모든 소비처(landmarksFromAlpha/ringFromAlpha/outsideMask/
+  // outwardBand, 그리고 index.html의 cacheAlphaHit/vboundsFromAlpha/sandCellsFromAlpha)가 알파
+  // 채널(+3) 한 바이트만 읽고 R/G/B는 전혀 안 읽는데 4바이트(RGBA) 전체를 상시 보유하고 있었음
+  // (마스코트 8장 기준 51.6MB, 그중 75%가 죽은 데이터). 알파만 압축 추출(1/4 크기) — index.html의
+  // readAlpha()와 반드시 같이 수정할 것(주석 참고).
+  const data = new Uint8Array(w * h);
+  for (let i = 0; i < data.length; i++) data[i] = rgba[i * 4 + 3];
   return { w, h, data };
 }
 
@@ -48,18 +55,18 @@ function bodyLandmarks(w, h, isOn) {
 }
 
 function landmarksFromAlpha(alpha) {
-  return alpha ? bodyLandmarks(alpha.w, alpha.h, (x, y) => alpha.data[(y * alpha.w + x) * 4 + 3] > 20) : null;
+  return alpha ? bodyLandmarks(alpha.w, alpha.h, (x, y) => alpha.data[y * alpha.w + x] > 20) : null;
 }
 
 async function ringFromAlpha(w, h, data) {
   const c = new OffscreenCanvas(w, h);
   const ctx = c.getContext('2d'), id = ctx.createImageData(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x, on = data[i * 4 + 3] > 20;
+    const i = y * w + x, on = data[i] > 20;
     let ring = false;
     if (on) {
-      const l = x > 0 ? data[(i - 1) * 4 + 3] > 20 : false, r = x < w - 1 ? data[(i + 1) * 4 + 3] > 20 : false,
-        u = y > 0 ? data[(i - w) * 4 + 3] > 20 : false, dn = y < h - 1 ? data[(i + w) * 4 + 3] > 20 : false;
+      const l = x > 0 ? data[i - 1] > 20 : false, r = x < w - 1 ? data[i + 1] > 20 : false,
+        u = y > 0 ? data[i - w] > 20 : false, dn = y < h - 1 ? data[i + w] > 20 : false;
       ring = !(l && r && u && dn);
     }
     id.data[i * 4] = 170; id.data[i * 4 + 1] = 140; id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = ring ? 255 : 0;
@@ -76,7 +83,7 @@ async function outsideMask(w, h, data, fadeStartFrac) {
     let taper = 1;
     if (y > fadeStart) { const t = Math.min(1, (y - fadeStart) / (fadeEnd - fadeStart)); taper = 1 - t * (1 - minA); }
     for (let x = 0; x < w; x++) {
-      const i = y * w + x, outside = !(data[i * 4 + 3] > 20);
+      const i = y * w + x, outside = !(data[i] > 20);
       id.data[i * 4] = 255; id.data[i * 4 + 1] = 255; id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = outside ? Math.round(255 * taper) : 0;
     }
   }
@@ -87,14 +94,14 @@ async function outsideMask(w, h, data, fadeStartFrac) {
 async function outwardBand(w, h, data) {
   let minX = w, maxX = -1, minY = h, maxY = -1;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    if (data[(y * w + x) * 4 + 3] > 20) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    if (data[y * w + x] > 20) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
   }
   if (maxX < 0) return null;
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
   const base = new OffscreenCanvas(w, h);
   const bctx = base.getContext('2d'), id = bctx.createImageData(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x, on = data[i * 4 + 3] > 20;
+    const i = y * w + x, on = data[i] > 20;
     id.data[i * 4] = 56; id.data[i * 4 + 1] = 142; id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = on ? 255 : 0;
   }
   bctx.putImageData(id, 0, 0);
