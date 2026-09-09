@@ -37,7 +37,7 @@
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
     @media(max-width:980px){.archive-wall{grid-template-columns:repeat(4,1fr)}.archive-head{display:block}.archive-actions{margin-top:24px}.data-node.n2,.data-node.n4{display:none}}
     @media(max-width:640px){.archive-wall{grid-template-columns:repeat(4,1fr);gap:7px}.space-ring{opacity:.55}.data-node{font-size:.52rem;padding:6px 8px}}
-    @media(max-width:980px){.spatial-hero{min-height:980px}.intro-copy{top:105px;width:auto;max-width:440px}.intro-copy h1{font-size:3.2rem}.intro-copy .slogan{font-size:.92rem}.intro-actions,.intro-meta{display:none}.torus-shell{left:5%;right:5%;top:36%;height:46%}.hologram{top:32%;right:5%;width:260px}.torus-back{left:6%;top:34%}.disc-shell{left:4%;right:4%;bottom:5%;height:18%}.torus-mode-toggle{right:5%}.network-shell{left:5%;right:5%;top:36%;height:46%}.network-back{left:6%;top:34%}}
+    @media(max-width:980px){.spatial-hero{min-height:980px}.intro-copy{top:105px;width:auto;max-width:440px}.intro-copy h1{font-size:3.2rem}.intro-copy .slogan{font-size:.92rem}.intro-actions,.intro-meta{display:none}.torus-shell{left:5%;right:5%;top:36%;height:46%}.hologram{top:32%;right:5%;width:260px}.torus-back{left:6%;top:34%}.disc-shell{left:4%;right:4%;bottom:5%;height:18%}.torus-mode-toggle{right:5%;top:calc(var(--mobile-torus-top,calc(322px + 3vh)) + 10px)}.network-shell{left:5%;right:5%;top:36%;height:46%}.network-back{left:6%;top:34%}}
     @media(max-width:640px){.spatial-hero{min-height:100svh;padding-top:75px}.mascot-veil{width:140vw;height:70%;top:52%}.intro-copy{left:20px;right:20px;top:94px;max-width:none}.intro-copy h1{font-size:2.7rem}.intro-copy .slogan{font-size:1rem}.gesture-hint{margin-top:12px}.torus-shell{left:0;right:0;top:35%;height:40%}.torus-card{width:128px;margin:-86px 0 0 -64px;border-radius:12px}.hologram{top:30%;left:20px;right:auto;width:235px;padding:11px 13px}.hologram h2{font-size:1rem;overflow-wrap:anywhere}.hologram p{display:none}.torus-back{left:18px;top:31%;font-size:.68rem}.disc-shell{left:0;right:0;bottom:7%;height:17%}.disc-item{width:92px;margin-left:-46px;font-size:.63rem}.scene-counter{display:none}.torus-mode-toggle{width:40px;height:40px;font-size:1.05rem;top:calc(var(--mobile-torus-top,calc(322px + 3vh)) + 10px);right:16px}.network-shell{left:0;right:0}.network-back{left:18px;top:31%;font-size:.68rem}.network-node{width:144px;height:192px;margin:-96px 0 0 -72px}}
     .hologram{border:0;background:transparent;backdrop-filter:none;color:#38d98b;text-shadow:none;transition:opacity .25s ease,transform .25s ease}.hologram small,.hologram h2,.hologram p{color:#38d98b;text-shadow:none}.hologram.hidden{opacity:0;transform:translateY(12px);pointer-events:none}.hologram.swap{animation:holoSharp .32s ease}@keyframes holoSharp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}.disc-shell{bottom:13%}
     @media(max-width:980px) and (min-width:641px){.disc-shell{bottom:10%}}
@@ -186,9 +186,31 @@
     // 열 스로틀링/누적 부담으로 후반부에 반드시 처진다는 게 이번 재설계의 가설 — early/mid도 같이
     // 남겨서(window.__deviceBenchDetail, ?dt=1 알림) 다음 실기기 재확인 때 실제로 후반부가 처지는지
     // 그래프처럼 눈으로 비교 가능하게 함.
-    function benchDeviceSpeed(){return new Promise(resolve=>{const N=50,WARMUP=15,FRAMES=150,BUCKETS=3,stage=document.createElement('div');stage.style.cssText='position:fixed;left:-9999px;top:-9999px;width:400px;height:400px;perspective:1100px;';document.body.appendChild(stage);let frame=0,lastT=null;const deltas=[];function tick(now){if(lastT!==null&&frame>WARMUP)deltas.push(now-lastT);lastT=now;stage.innerHTML='';const angle=frame/FRAMES*360;for(let i=0;i<N;i++){const el=document.createElement('div');const a=(angle+i*(360/N))*Math.PI/180,z=Math.cos(a)*160,x=Math.sin(a)*130;el.style.cssText=`position:absolute;left:150px;top:120px;width:110px;height:160px;border-radius:14px;background-color:#7657f6;background-image:url("hero/vizentive-home-bg.webp");background-size:cover;background-position:center;box-shadow:0 20px 45px rgba(80,50,150,.4);filter:blur(2px);transform:translate3d(${x}px,0px,${z}px) rotateY(0deg);`;stage.appendChild(el)}frame++;if(frame<=FRAMES)requestAnimationFrame(tick);else{stage.remove();const per=Math.floor(deltas.length/BUCKETS)||1,p75=arr=>{const s=arr.slice().sort((a,b)=>a-b);return s.length?s[Math.floor(s.length*0.75)]:0};const early=p75(deltas.slice(0,per)),mid=p75(deltas.slice(per,per*2)),late=p75(deltas.slice(per*2));resolve({early,mid,late,decisive:late})}}requestAnimationFrame(tick)})}
-    // 임계값은 "후반부(late)" 구간 값 기준 — 워크로드 자체는 그대로라 처지지 않는 기기는 예나 지금이나
-    // 비슷한 절대값으로 나옴. S9+(콜드스타트 33.4~50ms)와 S23+(16.7ms) 실측 사이에 여유 있게 배치.
+    // 2026-09-09 추가 발견(실기기 갤럭시 S9+, Mali-G72, ?dt=1&nw=1로 화이트리스트 배제 후 순수 벤치만
+    // 재확인): early/mid/late가 전부 16.7ms로 동일하게 나옴 — 이건 60Hz 화면의 vsync 주기(1/60초)와
+    // 정확히 같은 값이라, "이 기기가 빠르다"가 아니라 "이 부하가 이 기기한텐 가벼워서 60fps 천장에
+    // 캡핑된 것"으로 판명. 실제 히어로 페이지(도넛 3D+마스코트 다중 레이어)에서 이 기기가 예전에
+    // 콜드스타트 33~50ms까지 처졌던 것과 모순되는 결과라, 이 합성 부하 자체가 실제 페이지보다 훨씬
+    // 가벼워 변별력이 없었던 게 근본 원인 — 부하를 못 견디는 게 아니라 "델타가 vsync 밑으로 못
+    // 내려가서" 저사양도 고사양과 똑같은 숫자로 찍히는 구조적 캡. 카드 수(N) 50→160, 블러
+    // 2px→3px로 올려 vsync 천장 아래로 안 깔리게(=실제로 60fps를 못 버텨 델타가 16.7ms보다 커지게)
+    // 부하를 키움 — 캐시가 데워져 있어도(초반 뜨거운 상태 포함) 이 정도 부하부턴 저사양 기기가
+    // 실측으로 드러나야 정상. **아직 실기기(S9+ 등) 재확인 전** — 다음 ?dt=1&nw=1 테스트에서 late가
+    // 더 이상 16.7ms 고정값이 아니게 나오는지 반드시 재확인 필요.
+    // 2026-09-09 재확인 결과(실기기 S9+, 부하 상향 후 ?dt=1&nw=1 두 차례 재실측): 33.4/33.4/33.4ms,
+    // 50.1/50.2/50.2ms — vsync 천장은 벗어났지만(더 이상 16.7ms 고정 아님) 이번엔 초/중/후반이
+    // 서로 사실상 동일하게 나옴. "직전 캐시로 초반만 빠르고 후반에 처진다"는 애초 가설이 이 실기기
+    // 유형에선 안 맞았던 것으로 판단 — 3구간 분리 자체가 판정에 실질적 신호를 못 줌. 그렇다고 구간
+    // 계측 자체를 걷어내진 않고(사용자 요청: 계속 확인 중이라 ?dt=1 알림에 참고용으로 남겨둠, 다른
+    // 기기에서 다른 패턴이 나올 가능성 대비) 판정값(decisive)만 "후반부 단독"에서 "워밍업 이후 전체
+    // 표본 75백분위수"로 단순화 — 표본 수가 3배(전체 vs 1/3)로 늘어 더 안정적이면서, 구간이 실제로
+    // 다르면(다른 기기) 어차피 셋 다 비슷한 범위라 값 차이도 크지 않음.
+    function benchDeviceSpeed(){return new Promise(resolve=>{const N=160,WARMUP=15,FRAMES=150,BUCKETS=3,stage=document.createElement('div');stage.style.cssText='position:fixed;left:-9999px;top:-9999px;width:400px;height:400px;perspective:1100px;';document.body.appendChild(stage);let frame=0,lastT=null;const deltas=[];function tick(now){if(lastT!==null&&frame>WARMUP)deltas.push(now-lastT);lastT=now;stage.innerHTML='';const angle=frame/FRAMES*360;for(let i=0;i<N;i++){const el=document.createElement('div');const a=(angle+i*(360/N))*Math.PI/180,z=Math.cos(a)*160,x=Math.sin(a)*130;el.style.cssText=`position:absolute;left:150px;top:120px;width:110px;height:160px;border-radius:14px;background-color:#7657f6;background-image:url("hero/vizentive-home-bg.webp");background-size:cover;background-position:center;box-shadow:0 20px 45px rgba(80,50,150,.4);filter:blur(3px);transform:translate3d(${x}px,0px,${z}px) rotateY(0deg);`;stage.appendChild(el)}frame++;if(frame<=FRAMES)requestAnimationFrame(tick);else{stage.remove();const per=Math.floor(deltas.length/BUCKETS)||1,p75=arr=>{const s=arr.slice().sort((a,b)=>a-b);return s.length?s[Math.floor(s.length*0.75)]:0};const early=p75(deltas.slice(0,per)),mid=p75(deltas.slice(per,per*2)),late=p75(deltas.slice(per*2));resolve({early,mid,late,decisive:p75(deltas)})}}requestAnimationFrame(tick)})}
+    // 임계값은 "전체 표본" 기준(위 decisive 참고). 2026-09-09: 부하(N=50→160)를 올리면서 절대 ms 스케일
+    // 자체가 달라져 기존 S9+/S23+ 실측치(N=50 기준)는 더 이상 유효한 기준점이 아니었으나, 새 부하로
+    // 재실측한 S9+(엑시노스, Mali-G72)는 33.4ms/50.1ms 두 차례 모두 최대 임계값(28)을 넘어 tier 0으로
+    // 정확히 잡힘 — tier 0 경계는 이걸로 확인됨. tier 1~4 경계(18/20/22/25)는 아직 그 사이 성능대
+    // 실기기로 확인된 바 없어 참고용 그대로 둠 — S23+(tier 5 기대)를 포함해 중간 기기 재실측 필요.
     const DEVICE_TIER_THRESHOLDS=[18,20,22,25,28];let deviceBenchMs=null,deviceTier=0,mascotAxisLevel=0,deviceForceNetworkOnly=true;
     function applyDeviceTier(tier,source){
       const wasForceNetworkOnly=deviceForceNetworkOnly;
@@ -209,10 +231,13 @@
       // 배지는 격상 시 값이 바뀌는 걸 보여주려고 매번 새로 만들지 않고 같은 엘리먼트를 갱신.
       if(new URLSearchParams(location.search).get('dt')==='1'){
         const d=window.__deviceBenchDetail;
-        alert(`기기 성능 벤치마크\n\n판정 방식: ${source}${window.__gpuRenderer?'\nGPU(참고용, 판정엔 미사용): '+window.__gpuRenderer:''}${d?`\n초반 ${d.early.toFixed(1)}ms / 중반 ${d.mid.toFixed(1)}ms / 후반 ${d.late.toFixed(1)}ms (판정=후반)`:''}\ntier: ${deviceTier} (0=최소~5=전체)`);
+        // 배지 갱신을 alert()보다 먼저 실행 — alert()는 확인을 누르기 전까지 스크립트를 막는 모달이라,
+        // 순서가 반대면 알림창이 떠 있는 동안 배지가 "이전 값"인 채로 화면 캡처/사진에 찍힘(실기기
+        // 테스트 중 실제로 확인된 현상, 2026-09-09).
         let badge=document.getElementById('__deviceTierBadge');
         if(!badge){badge=document.createElement('div');badge.id='__deviceTierBadge';badge.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;background:#000;color:#0f0;font:12px monospace;padding:6px 10px;border-radius:6px;opacity:.85;pointer-events:none;white-space:pre;';document.body.appendChild(badge)}
-        badge.textContent=`tier=${deviceTier} late=${d?d.late.toFixed(1):'-'}ms (${source})`;
+        badge.textContent=`tier=${deviceTier} decisive=${d?d.decisive.toFixed(1):'-'}ms (${source})`;
+        alert(`기기 성능 벤치마크\n\n판정 방식: ${source}${window.__gpuRenderer?'\nGPU(참고용, 판정엔 미사용): '+window.__gpuRenderer:''}${d?`\n초반 ${d.early.toFixed(1)}ms / 중반 ${d.mid.toFixed(1)}ms / 후반 ${d.late.toFixed(1)}ms / 판정값 ${d.decisive.toFixed(1)}ms(전체 표본 75%ile)`:''}\ntier: ${deviceTier} (0=최소~5=전체)`);
       }
     }
     // 2026-09-09: "확실히 아는 기기는 테스트 자체를 스킵하자" 요청 — 실기기 ?dt=1로 검증된 렌더러
@@ -221,8 +246,31 @@
     // window.__gpuRenderer 문자열을 그대로/부분매치로 확정된 것만 추가. Mali-T 계열(2016년 이전 세대,
     // 이후 Mali-G로 완전히 세대 교체돼 번호가 안 겹침)만 예외적으로 세대 단위 규칙 허용 — 저사양 확정.
     // 안드로이드가 압도적 다수라 여기 항목이 쌓일수록 재방문 기기 대부분이 아래 실측 테스트 자체를 스킵.
+    //
+    // 실기기가 없는 칩셋은 AnTuTu 11 점수 기반 선형 추정으로 잠정 tier를 매김(2026-09-09, 사용자
+    // 요청) — 실측 확정점 두 개(S9+ 엑시노스9810/Mali-G72=611,930점=tier0, S23+ 스냅드래곤8 Gen2
+    // for Galaxy/Adreno740=1,695,011점=tier5)를 잇는 구간을 5등분:
+    //   tier = clamp(ceil((antutu11점수 - 611930) / 216616.2), 0, 5)
+    //   tier0: ~611,930 / tier1: 611,930~828,546 / tier2: 828,546~1,045,162 /
+    //   tier3: 1,045,162~1,261,779 / tier4: 1,261,779~1,478,395 / tier5: 1,478,395 이상
+    //   (그 위로는 전부 5 — 상한 없음). S23+ 앵커값은 2026-09-09 antutu.com/web/ranking 공식 랭킹
+    //   기준 1,695,011로 정정(이전엔 nanoreview.net 검색스니펫 값 1,744,323을 썼었는데, 직접 fetch가
+    //   막혀 있던 3자 집계 사이트였음 — antutu.com 공식 랭킹을 최우선 출처로 확정한 뒤 재계산).
+    // AnTuTu 버전이 다르면(10 vs 11 등) 점수 체계 자체가 달라 이 공식에 그대로 못 씀 — 반드시 "AnTuTu
+    // 11" 표기가 있는 점수만 사용. 이렇게 추가한 항목은 실기기 실측이 아니므로 주석에 "AnTuTu11 추정,
+    // 실기기 미확인"이라고 표시 — Mali-G72/Adreno740처럼 ?dt=1로 직접 확인된 항목과 신뢰도 구분.
+    // 출처: 애플 계열은 https://browser.geekbench.com/ios-benchmarks(Geekbench7), 그 외는
+    // https://www.antutu.com/web/ranking(AnTuTu V11) — 둘 다 원자료가 Supabase
+    // benchmark_ios_geekbench/benchmark_android_antutu 테이블에 있음(docs/DEVICE_BENCHMARK_DATABASE.md).
     const KNOWN_DEVICE_GPU_TIERS=[
-      // {match:/Adreno.*?630/i,tier:0}, // 예: 갤럭시 S9+ 계열 — 실기기 ?dt=1로 GPU 문자열 확인 후 주석 해제
+      {match:/Adreno.*?630/i,tier:0}, // 갤럭시 S9+ 스냅드래곤845 변형(추정 — 아직 실기기 미확인)
+      {match:/Mali-G72/i,tier:0}, // 갤럭시 S9+ 엑시노스9810 변형 — 실기기 ?dt=1로 확인(ANGLE (ARM, Mali-G72, OpenGL ES 3.2)), 2026-09-09
+      {match:/Adreno.*?740/i,tier:5}, // 갤럭시 S23+ (스냅드래곤 8 Gen 2, 해당 연도 전 지역 단일 칩셋) — antutu.com 공식 랭킹 1,695,011점, 위 공식상 tier5. 실기기 미확인
+      {match:/Adreno.*?840/i,tier:5}, // 갤럭시 S26+ 스냅드래곤 변형(스냅드래곤8 엘리트 Gen5) — antutu.com엔 "S26+" 단독 항목이 없어 같은 세대 Galaxy S26(2,827,538)/S26 Ultra(3,463,142)로 대신 확인, 둘 다 위 공식상 훨씬 위라 tier5 확실. 실기기 미확인
+      {match:/Mali-G615/i,tier:5}, // 갤럭시 탭 A11+ 5G(SM-X236N) — 실기기 ?tier=5 강제 후 실제 조작감(버벅임/깜빡임 없음)으로 확인(ANGLE (ARM, Mali-G615 MC2, OpenGL ES 3.2)), 2026-09-09. 이 기기는 과거 숫자 임계값 방식으로 저사양 오판정됐던 그 사례라 벤치마크 점수가 아니라 실제 렌더링 확인으로만 등록 — 신뢰도는 Mali-G72/Adreno740급(실측)
+      // iPhone 계열은 iOS Safari가 UNMASKED_RENDERER_WEBGL을 기기 구분 없이 "Apple GPU"로 뭉뚱그려
+      // 내려줘 이 화이트리스트로는 특정 기기를 못 집음 — 아래 iosKnownTier()가 화면 해상도 기반으로
+      // 별도 처리(2026-09-09).
     ];
     function knownDeviceTier(renderer){
       if(!renderer)return null;
@@ -230,12 +278,42 @@
       for(const{match,tier}of KNOWN_DEVICE_GPU_TIERS)if(match.test(renderer))return tier;
       return null;
     }
+    // 2026-09-09: 사용자 실측 — "iPhone 14는 S9+급". Geekbench(https://browser.geekbench.com/ios-benchmarks
+    // 참고 지정)/AnTuTu 등 범용 벤치마크 점수로는 이 결론에 못 다다름(iPhone14는 두 벤치마크 다 S23+와
+    // 비슷하거나 더 높게 나오는데도 실제 이 페이지 CSS 합성 워크로드에선 S9+처럼 느림 — 범용 벤치마크
+    // 점수가 이 워크로드 성능과 사실상 무관하다는 게 실측으로 확인됨, 그래서 점수 기반 추정 대신 직접
+    // 지정). GPU 문자열이 안 통하니 화면 해상도+배율(devicePixelRatio)로 구분 — iPhone 12/12 Pro/13/
+    // 13 Pro/14가 전부 390×844@3x로 동일해 이 신호론 다섯 기종이 함께 잡히지만, 전부 14와 같거나 더
+    // 약한 칩(A14 또는 4코어GPU A15)이라 tier0으로 묶여도 안전(강한 기기를 잘못 깎는 방향이 아니라
+    // 약한 쪽으로 보수적으로 묶는 방향). iPhone 15부터 다이나믹 아일랜드로 해상도가 바뀌어(393×852)
+    // 이 신호에 안 걸림 — 신형이 잘못 낮게 잡힐 걱정은 없음.
+    function iosKnownTier(){
+      if(!/iPhone/.test(navigator.userAgent))return null;
+      if(screen.width===390&&screen.height===844&&window.devicePixelRatio===3)return 0;
+      return null;
+    }
     const gpuRenderer=getGPUTier();if(gpuRenderer)window.__gpuRenderer=gpuRenderer;
-    const knownTier=knownDeviceTier(gpuRenderer);
+    // 2026-09-09: ?tier=0~5 — 화이트리스트/실측 벤치마크를 전부 건너뛰고 지정한 티어로 즉시 부팅.
+    // 재현 테스트용(예: 마스코트 전환+공간전환 동시 발생 버그처럼 특정 tier에서만 열리는 UI를 실기기
+    // 벤치마크 결과를 기다리지 않고 바로 확인하고 싶을 때). applyDeviceTier가 토글 노출 등 나머지
+    // 상태를 전부 알아서 맞춰줌 — 이 분기 자체가 knownTier/백그라운드 벤치보다 우선.
+    const forcedTierParam=new URLSearchParams(location.search).get('tier');
+    const forcedTier=forcedTierParam!=null&&/^[0-5]$/.test(forcedTierParam)?Number(forcedTierParam):null;
+    if(forcedTier!=null){
+      applyDeviceTier(forcedTier,'url-forced');
+    }else{
+    // ?nw=1(no-whitelist, 기존 ?dt=1/?tf=1류 진단 파라미터 관례와 통일) — 화이트리스트(GPU 문자열/iOS
+    // 화면해상도 둘 다)에 걸리는 실기기에서도 known-device 즉시 확정 경로를 강제로 건너뛰고 실측
+    // 벤치마크(timing-sustained-bg) 루틴 자체를 확인하고 싶을 때 임시로 붙임. 화이트리스트 항목 자체는
+    // 안 건드림(2026-09-09).
+    const noWhitelist=new URLSearchParams(location.search).get('nw')==='1';
+    const gpuKnownTier=noWhitelist?null:knownDeviceTier(gpuRenderer);
+    const iosTier=noWhitelist?null:iosKnownTier();
+    const knownTier=gpuKnownTier!=null?gpuKnownTier:iosTier;
     if(knownTier!=null){
       // 확정 기기 — 실측 벤치마크 자체를 안 돌림(그 기기에 불필요한 백그라운드 부담을 얹지 않음),
       // 대기 없이 곧바로 확정된 티어로 부팅.
-      applyDeviceTier(knownTier,'gpu-known-device');
+      applyDeviceTier(knownTier,gpuKnownTier!=null?'gpu-known-device':'ios-screen-known-device');
     }else{
       // 모르는 기기 — 기존 정책 유지: "테스트하느라 홈페이지가 늦게 뜨면 안 된다" 요청대로 측정을
       // 기다리지 않고 일단 최소 사양(tier 0)으로 즉시 부팅, 벤치마크는 부팅 뒤 백그라운드에서 실제
@@ -249,11 +327,19 @@
         const badge=document.createElement('div');badge.id='__deviceTierBadge';badge.textContent=`tier=${deviceTier} (boot-default, 측정 중…)`;badge.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;background:#000;color:#0f0;font:12px monospace;padding:6px 10px;border-radius:6px;opacity:.85;pointer-events:none;white-space:pre;';document.body.appendChild(badge);
       }
       // 백그라운드 정밀 측정 — spatialStartRender()를 절대 기다리게 하지 않음(트리거는 아래
-      // spatialBootstrapReady.then(spatialStartRender)만 사용). 부팅 1.5초 뒤(초기 크리티컬 렌더가
-      // 끝난 다음) 1차 측정, 그로부터 6초 뒤(실제 도넛/네트웍이 이미 돌고 있는 상태에서, 즉 합성
-      // 벤치마크 부하가 실제 페이지 부하와 함께 걸리는 더 현실적인 조건으로) 2차 측정 — 단발성 튐을
-      // 피하려 두 결과 중 더 나쁜(낮은) 티어를 최종값으로 채택. 계속 반복하지 않는 이유: 이미 약하다고
-      // 나온 기기에 백그라운드 재측정을 무한히 얹는 것 자체가 그 기기에 부담을 더하는 모순이라 2회로 제한.
+      // spatialBootstrapReady.then(spatialStartRender)만 사용). 그로부터 6초 뒤(실제 도넛/네트웍이 이미
+      // 돌고 있는 상태에서, 즉 합성 벤치마크 부하가 실제 페이지 부하와 함께 걸리는 더 현실적인 조건으로)
+      // 2차 측정 — 단발성 튐을 피하려 두 결과 중 더 나쁜(낮은) 티어를 최종값으로 채택. 계속 반복하지
+      // 않는 이유: 이미 약하다고 나온 기기에 백그라운드 재측정을 무한히 얹는 것 자체가 그 기기에 부담을
+      // 더하는 모순이라 2회로 제한.
+      // 2026-09-09: 1차 측정 시작을 "부팅 1.5초 뒤" 고정 타이머에서 window `load`(페이지 자체의
+      // 이미지/비디오/spatial API 등 초기 리소스 로딩이 실제로 다 끝나는 시점) 이후로 바꿈 — 실기기
+      // 재확인 중 같은 S23+가 같은 1분 안에 tier 0/5를 오갔는데, 원인이 고정 1.5초 시점에 페이지 자체
+      // 리소스 로딩이 아직 안 끝나 그 부하가 벤치와 겹쳤을 가능성으로 좁혀짐(브라우저 캐시가 없는
+      // 첫 로드엔 그 로딩이 오래 걸려 벤치를 밀어내고, 재방문으로 캐시가 데워지면 로딩이 빨리 끝나
+      // 벤치가 방해 없이 돎 — 캐시 상태에 따라 결과가 갈리는 건 애초 요청("캐싱과 무관하게")과 배치).
+      // load 시점 이후에도 살짝 여유(1.5초)를 그대로 둬 디코드 등 후속 작업이 완전히 가라앉게 함.
+      // 아직 실기기 재확인 전 — 다음 재방문 반복 테스트에서 tier가 안정적으로 나오는지 확인 필요.
       const tierFromBench=r=>{const idx=DEVICE_TIER_THRESHOLDS.findIndex(ms=>r.decisive<=ms);return idx===-1?0:5-idx};
       // 패스당 타임아웃 안전판(10초) — 워낙 느린 기기라 150프레임을 다 못 채우는 극단적 경우, 백그라운드
       // 측정이 조용히 무한정 걸려 있지 않고 최하위(999) 값으로 확정되게 함. 부팅 자체는 이미 tier 0로
@@ -270,7 +356,23 @@
           else if(new URLSearchParams(location.search).get('dt')==='1')applyDeviceTier(deviceTier,'timing-sustained-bg(변경없음)');
         });
       };
-      setTimeout(()=>runBackgroundDeviceBench(1),1500);
+      const startBenchAfterLoad=()=>setTimeout(()=>runBackgroundDeviceBench(1),1500);
+      if(document.readyState==='complete')startBenchAfterLoad();else window.addEventListener('load',startBenchAfterLoad,{once:true});
+      // 2026-09-09 C안: 로컬 화이트리스트 미스여도 부팅은 안 막고, 서버 DB(benchmark_android_antutu.
+      // gpu_pattern, docs/DEVICE_BENCHMARK_DATABASE.md)에 백그라운드로 바로 물어봐서 매치되면
+      // 업그레이드만(다운그레이드 없음, 위 timing-sustained-bg와 동일 원칙). 요청은 fire-and-forget으로
+      // 즉시 나가고(가벼운 JSON 요청이라 window.load까지 안 미룸), 실패/타임아웃/매치없음이면 조용히
+      // 무시 — 이미 로컬로 정상 부팅된 화면엔 이 경로가 실패해도 영향 없음. 화이트리스트 자체를 대체하는
+      // 게 아니라, 재배포 없이 신규 칩을 커버하는 보조 경로.
+      if(gpuRenderer){
+        const dbController=new AbortController(),dbTimer=setTimeout(()=>dbController.abort(),3000);
+        fetch('/api/device-tier-lookup?gpu='+encodeURIComponent(gpuRenderer),{signal:dbController.signal})
+          .then(res=>res.ok?res.json():null)
+          .then(data=>{if(typeof data?.tier==='number'&&data.tier>deviceTier)applyDeviceTier(data.tier,'db-gpu-match')})
+          .catch(()=>{})
+          .finally(()=>clearTimeout(dbTimer));
+      }
+    }
     }
     const SPATIAL_SCATTER_KINDS_MAP=['up','down','left','right','radial','toward','away'],SPATIAL_PATH_STYLES_MAP=['bounce','orbit','wave','loop','plain'],SPATIAL_AXES=['X','Y','Z'],SPATIAL_FALLBACK_RECIPE={k:'radial',p:'bounce',sd:{bounces:2,amp:60,spin:{axis:'Y',deg:0}}};
     const spatialConfig={mode:null,torusPick:null,netOrbitRadiusJitter:.05,netOrbitAngleJitter:.4,netOrbitSpeedBase:.0035,netOrbitSpeedJitter:.0035,netTiltRange:1.1,scatterOutMs:1120,scatterInMs:1226,scatterDist:1700,bounceMs:1300,autoExplodeTorusV:.12,autoExplodeNetworkV:16};
@@ -540,7 +642,23 @@ targetH=fitsWidth?maxH:maxW/aspect;ghost.style.left=`${(innerWidth-targetW)/2}px
     const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)document.documentElement.classList.add('perf-lite');
     const spatialIntro=document.querySelector('#spatialIntro'),introActions=document.querySelector('.intro-actions');
-    function syncMobileTorusPosition(){if(innerWidth>640){spatialIntro.style.removeProperty('--mobile-torus-top');return}const heroBox=spatialIntro.getBoundingClientRect(),actionsBox=introActions.getBoundingClientRect();spatialIntro.style.setProperty('--mobile-torus-top',`${Math.round(actionsBox.bottom-heroBox.top+innerHeight*.03)}px`)}
+    // 2026-09-09: 기존엔 .intro-actions(상담신청 버튼 줄) 기준으로 계산했는데, 그 엘리먼트가 980px 이하
+    // 화면에서 display:none이라(위 미디어쿼리) getBoundingClientRect가 항상 0 — 그래서 계산식이 사실상
+    // "히어로 맨 위+3vh"가 돼버려 토글이 실제 도넛/네트워크 공간과 무관하게 화면 상단에 붙어있던 버그.
+    // torusShell(도넛/네트워크 공용 컨테이너, 아래서 선언되지만 이 함수는 그 이후에나 호출되므로 TDZ
+    // 문제 없음) 자신의 위치를 기준으로 바꿔 실제 그 공간 바로 옆(상단 모서리)에 오도록 수정.
+    // 2026-09-09 후속: 641~980px 폭 구간(태블릿 등)은 .torus-mode-toggle이 top:92px 고정값을 그대로
+    // 쓰고 있어서 위 --mobile-torus-top 수정이 그 구간엔 전혀 안 먹혔음(실기기 재확인으로 발견) —
+    // 이 함수의 컷오프도 980px로 맞추고, 해당 미디어쿼리에도 같은 var(--mobile-torus-top) 규칙을 추가.
+    // 2026-09-09 재후속: 태블릿 세로 방향에서 torusShell 자체의 top이 헤더(고정, z-index:80으로 토글의
+    // z-index:16보다 위) 높이보다 작게 나오는 경우가 있어(레이아웃상 그 구간 자체의 문제, 실기기로 확인)
+    // 토글이 헤더 밑에 가려짐 — headerEl.getBoundingClientRect().bottom을 최소값으로 클램프해 헤더
+    // 높이가 얼마든(브레이크포인트마다 다름) 항상 헤더 아래로 내려오도록 보정.
+    // 도넛/네트워크 중 현재 비활성 상태인 쪽은 display:none이라 getBoundingClientRect가 0이 되므로,
+    // 항상 torusShell이 아니라 그 시점에 실제 활성화된 쪽(spatialModes[spatialModeIndex])을 참조 —
+    // 위 재현 테스트에서 network 모드일 때 torusShell 기준으로 재면 0이 나오던 걸 이렇게 고침.
+    const headerEl=document.querySelector('header');
+    function syncMobileTorusPosition(){if(innerWidth>980){spatialIntro.style.removeProperty('--mobile-torus-top');return}const activeShell=spatialModes[spatialModeIndex]==='network'?networkShell:torusShell,heroBox=spatialIntro.getBoundingClientRect(),shellBox=activeShell.getBoundingClientRect(),headerBottom=headerEl?headerEl.getBoundingClientRect().bottom:0,top=Math.max(shellBox.top-heroBox.top,headerBottom-heroBox.top+8);spatialIntro.style.setProperty('--mobile-torus-top',`${Math.round(top)}px`)}
     const torusShell=document.querySelector('#torusShell'),torusScene=document.querySelector('#torusScene'),torusBack=document.querySelector('#torusBack');
     // 2026-09-05: "메인페이지 속도개선 여지" 실측(CPU 프로파일) — 도넛 idle 루프 spatialFrame()이 매
     // 애니메이션 프레임(60fps)마다 isOnScreen(torusShell)(=getBoundingClientRect)을 불러서, 페이지에
