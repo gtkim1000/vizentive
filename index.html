@@ -1665,6 +1665,19 @@ let t0=null;const windDir=Math.random()<.5?-1:1;
 // 정책상 기기별 분기는 배제). 정상~다소 느린 기기에선 절대 안 걸리도록(실측 정상 완료 6~10초 대비 여유
 // 있게) 12초로 설정 — 이 시간을 넘기면 남은 pending 조각/타일을 기다리지 않고 즉시 최종 상태로 스냅.
 const SANDSPREAD_SAFETY_CAP_MS=12000;
+// 2026-09-10: "의상 갈아입는 도중엔 다른 클릭이 먹지 않는다" 신고 — Long Tasks API로 실측(오염 없는
+// 깨끗한 환경 재확인 필수, 떠돌던 헤드리스 브라우저 프로세스가 처음엔 결과를 심하게 왜곡시킴)한 결과
+// 모드2/4/6(크럼블/조립/블록조립 — 전부 이 아래 frame() 루프의 tileBudget/cellBudget 방식 공유)에서
+// frame() 콜백 한 번이 90~120ms+씩 걸리며 프레임 사이 거의 빈틈없이 이어져 ~1.5~2초간 메인 스레드가
+// 사실상 계속 막혀 있음(클릭 이벤트 처리가 그 사이에 낄 틈이 없음) — mascotTileBudget/mascotCellBudget
+// (서버 설정값 90/20, 개수 기준 상한)이 "한 프레임에 최대 몇 개"를 정할 뿐 "한 프레임에 실제로 몇 ms
+// 걸리는지"는 전혀 안 보므로, spawnCrumblePiece 1개당 비용이 예상보다 크면 그대로 누적돼 프레임
+// 예산(16.7ms)을 몇 배씩 초과함. 개수 상한은 그대로 상한선(안전판)으로 유지하되, 그 안에서 실제
+// 경과시간을 함께 체크해 이 시간 예산을 넘기면 개수가 남아있어도 그 프레임은 즉시 마감 — 나머지는
+// 다음 프레임(들)로 자연히 이어짐(이미 있던 "밀리면 다음 프레임으로" 설계와 완전히 같은 원리, 트리거
+// 축을 개수에서 시간으로 하나 더 추가한 것뿐). 8ms로 잡은 이유: 16.7ms(60fps) 프레임 예산의 절반
+// 수준으로 남겨, 브라우저 자체의 스타일/레이아웃/페인트 몫과 입력 이벤트 처리 몫을 위한 여유를 둠.
+const SANDSPREAD_FRAME_TIME_BUDGET_MS=8;
 // 2026-09-05: "모드2/3에서 크럼블 잔상이 남아 동작" 조사 2단계 — 위 SVG 트랜지션 제거로 median 프레임
 // 간격은 이상적인 16.7ms로 돌아왔지만, 타일 수가 가장 많은 모드2(최대 44×70=3080개)는 여전히 가끔
 // 몇 초씩 못 끝내는 경우가 실측(Playwright)에서 재현됨 — tileBudget을 90→400으로 대폭 올려도 개선이
@@ -1684,7 +1697,7 @@ let pendingIdx=cells.length,pendingTilesIdx=0;function frame(now){if(t0===null)t
 // 밀린 게 아무리 많아도 이번 프레임엔 일부만 보여주고 나머지는 다음 프레임(들)로 자연히 이어지도록
 // 함 — 느린 기기에서는 총 소요 시간이 늘어나는 대신(완료 판정은 이미 pending/active 잔량 기준이라
 // 자동으로 더 길게 이어짐) 매 프레임이 항상 "그때그때" 눈에 보이는 진행으로 나타남.
-let tileBudget=mascotTileBudget;while(tileBudget>0&&pendingTilesIdx<tiles.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=mascotCellBudget;while(cellBudget>0&&pendingIdx<cells.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||cells[pendingIdx].triggerY<=y)){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}
+const frameDeadline=now+SANDSPREAD_FRAME_TIME_BUDGET_MS;let tileBudget=mascotTileBudget;while(tileBudget>0&&pendingTilesIdx<tiles.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||tiles[pendingTilesIdx].triggerY<=y)&&performance.now()<frameDeadline){const tl=tiles[pendingTilesIdx++];if(assembleMode){inFlightLandings++;spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph,()=>{inFlightLandings--;tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill)})}else{tl.rectW.setAttribute('fill','#000');tl.rectT.setAttribute('fill',tl.toFill);spawnCrumblePiece(tl.px,tl.py,tl.pw,tl.ph)}tileBudget--}let cellBudget=mascotCellBudget;while(cellBudget>0&&pendingIdx<cells.length&&liveCrumblePieces<LIVE_PIECE_CAP&&(tRaw>=1||cells[pendingIdx].triggerY<=y)&&performance.now()<frameDeadline){const c=cells[pendingIdx++];spawnCrumblePiece(c.srcX,c.srcY,c.w,c.h);cellBudget--}
 if(window.__sandDebugLog)window.__sandDebugLog.push({t:now,pending:cells.length-pendingIdx,tiles:tiles.length-pendingTilesIdx,inFlight:inFlightLandings});const safetyForceDone=(now-t0)>SANDSPREAD_SAFETY_CAP_MS;if(!safetyForceDone&&(tRaw<1||pendingIdx<cells.length||pendingTilesIdx<tiles.length||inFlightLandings>0))requestAnimationFrame(frame);else{svg.remove();wasEl.style.maskImage=wasEl.style.webkitMaskImage='';
 hideIdx(was);if(next===0){mv.classList.remove('mv-hidden');toEl.style.opacity='0'}toEl.style.maskImage=toEl.style.webkitMaskImage='';toEl.style.zIndex='';if(pulseGlowEl){pulseGlowEl.style.maskImage=pulseGlowEl.style.webkitMaskImage=''}costumeIdx=next;updateSilhouetteForIdx(next);updateHitButtonsForIdx(next);if(pulseGlowEl)pulseGlowStopPending=false;setTimeout(()=>sandLayer.remove(),Math.max(0,sandLayerRemoveAt-performance.now()));requestAnimationFrame(()=>{wasEl.style.transition='';toEl.style.transition='';transitionBusy=false})}}requestAnimationFrame(frame)}
 // 2026-09-07: 새 전환 연출 "슬라이스"(모드5) 추가 — "이미지를 슬라이스 내어 왼쪽으로 빠져나가는" 요청.
